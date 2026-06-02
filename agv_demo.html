@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>倉庫AGV 安全走行シミュレータ | KRworks</title>
+<style>
+  :root{
+    --bg:#070b12; --panel:#0d1622; --line:#16263a; --ink:#cfe7f5; --dim:#5f7e96;
+    --cyan:#36e0e0; --violet:#9d7bff;
+    --mono:"DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+  }
+  body.day{ --bg:#eef3f7; --panel:#ffffff; --line:#cdd9e3; --ink:#1d3343; --dim:#5a7488; --cyan:#0c8f9b; --violet:#6b53c9; }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);transition:background .3s,color .3s}
+  body{min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(54,224,224,.10), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(157,123,255,.10), transparent 60%),
+      var(--bg);
+    display:flex;flex-direction:column;align-items:center;padding:22px 14px 40px}
+  body.day{background:radial-gradient(900px 500px at 80% -10%, rgba(12,143,155,.10), transparent 60%),var(--bg)}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.30;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+  body.day::before{opacity:0}
+  .wrap{width:100%;max-width:980px;position:relative;z-index:2}
+  header{margin-bottom:14px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--cyan);text-transform:uppercase;margin:0 0 6px}
+  h1{font-family:var(--mono);font-weight:700;font-size:clamp(20px,4vw,32px);margin:0;letter-spacing:.02em;color:var(--ink);text-shadow:0 0 18px rgba(54,224,224,.18)}
+  body.day h1{text-shadow:none}
+  .sub{color:var(--dim);font-size:13px;margin-top:6px;max-width:66ch;line-height:1.55}
+  .stage{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    background:linear-gradient(180deg,#0a1320,#070d16);box-shadow:0 24px 60px -28px rgba(0,0,0,.8)}
+  body.day .stage{background:#dfe7ee}
+  canvas{display:block;width:100%;height:auto;background:transparent;cursor:crosshair;touch-action:none}
+  .hud{position:absolute;top:9px;left:11px;font-family:var(--mono);font-size:11.5px;color:var(--cyan);
+    letter-spacing:.03em;display:flex;gap:13px;flex-wrap:wrap;text-shadow:0 0 10px rgba(0,0,0,.6)}
+  .hud b{color:#eaf6ff;font-weight:700} body.day .hud b{color:#08303a}
+  .badge{position:absolute;top:9px;right:11px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--dim);border:1px solid var(--line);padding:3px 8px;border-radius:6px}
+  .tip{position:absolute;bottom:9px;left:11px;font-family:var(--mono);font-size:11px;color:var(--dim);background:rgba(7,11,18,.5);padding:3px 8px;border-radius:6px}
+  body.day .tip{background:rgba(255,255,255,.6)}
+  .panel{margin-top:13px;border:1px solid var(--line);border-radius:14px;background:var(--panel);
+    padding:15px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px 24px}
+  .ctrl label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;margin-bottom:8px}
+  .ctrl label b{color:var(--cyan);font-weight:700}
+  input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--violet));outline:none;margin:0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--cyan);cursor:pointer;box-shadow:0 0 10px rgba(54,224,224,.5)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--cyan);cursor:pointer}
+  .btns{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;grid-column:1/-1}
+  button{font-family:var(--mono);font-size:13px;letter-spacing:.06em;cursor:pointer;background:transparent;color:var(--ink);border:1px solid var(--line);padding:11px 15px;border-radius:9px;transition:.15s}
+  button:hover{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(54,224,224,.3)}
+  button.primary{background:linear-gradient(90deg,rgba(54,224,224,.16),rgba(157,123,255,.16));border-color:var(--cyan)}
+  .legend{margin-top:13px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+  footer{margin-top:20px;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.08em}
+  .note{margin-top:8px;font-size:12px;color:var(--dim);line-height:1.5}
+  .back{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;letter-spacing:.06em;color:var(--cyan);text-decoration:none;border:1px solid var(--line);padding:9px 15px;border-radius:10px;margin-bottom:16px;transition:.15s}
+  .back:hover{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(54,224,224,.3);color:#eaf6ff}
+  body.day .back:hover{color:#08303a}
+  .resume-overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    background:rgba(7,11,18,.55);cursor:pointer;z-index:4;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+  body.day .resume-overlay{background:rgba(220,231,238,.55)}
+  .resume-overlay .rbtn{font-family:var(--mono);font-size:15px;letter-spacing:.08em;color:#eaf6ff;
+    border:1px solid var(--cyan);background:linear-gradient(90deg,rgba(54,224,224,.22),rgba(157,123,255,.22));padding:13px 28px;border-radius:10px}
+  body.day .resume-overlay .rbtn{color:#08303a}
+  .resume-overlay .rtxt{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  @media(max-width:560px){
+    body{padding:14px 9px 30px} .sub{font-size:12px} .hud{font-size:10px;gap:9px}
+    .panel{padding:13px;gap:13px 16px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+    button{padding:12px 13px;font-size:12px;flex:1 1 auto}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="index.html" class="back">← トップへ戻る</a>
+  <header>
+    <p class="kicker">Warehouse Robotics / Safety Demo</p>
+    <h1>倉庫AGV 安全走行シミュレータ</h1>
+    <p class="sub">自動搬送ロボット（AGV）が倉庫の通路を走行するデモです。前方の障害物・横切る人・他のロボットを検知して自動で減速・停止し、空き車線があれば追い越します。交差点では直交方向のロボットと譲り合います。通路をクリック／タップすると、その場所に障害物を置けます。</p>
+  </header>
+
+  <div class="stage">
+    <canvas id="cv" width="952" height="470"></canvas>
+    <div class="hud">
+      <span>時間 <b id="hT">0.0</b>s</span>
+      <span>走行 <b id="hRun">0</b></span>
+      <span>停止 <b id="hStop">0</b></span>
+      <span>追越 <b id="hPass">0</b></span>
+      <span>譲り合い <b id="hYield">0</b></span>
+    </div>
+    <div class="badge">KRWORKS</div>
+    <div class="tip">通路をクリック／タップで障害物を追加（最大4個）</div>
+    <div class="resume-overlay" id="resume">
+      <div class="rbtn">▶ 再開</div>
+      <div class="rtxt">しばらく操作がなかったため一時停止しました</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ctrl"><label>横AGV <b id="vN">4</b> 台</label><input id="sN" type="range" min="1" max="6" step="1" value="4"></div>
+    <div class="ctrl"><label>縦AGV <b id="vNV">2</b> 台</label><input id="sNV" type="range" min="0" max="3" step="1" value="2"></div>
+    <div class="ctrl"><label>巡航速度 <b id="vV">1.7</b> m/s</label><input id="sV" type="range" min="0.4" max="3.0" step="0.1" value="1.7"></div>
+    <div class="ctrl"><label>安全距離 <b id="vD">1.6</b> m</label><input id="sD" type="range" min="0.6" max="3.0" step="0.1" value="1.6"></div>
+    <div class="ctrl"><label>障害物 <b id="vO">1</b> 個</label><input id="sO" type="range" min="0" max="4" step="1" value="1"></div>
+    <div class="ctrl"><label>歩行者 <b id="vP">2</b> 人</label><input id="sP" type="range" min="0" max="5" step="1" value="2"></div>
+    <div class="btns">
+      <button id="bRun" class="primary">▶ 実行 / 一時停止</button>
+      <button id="bReset">↺ リセット</button>
+      <button id="bClear">障害物クリア</button>
+      <button id="bTheme">☀ 昼 / 夜</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot" style="background:#39e08a"></i>走行中</span>
+    <span><i class="dot" style="background:#ffcf4a"></i>減速・停止</span>
+    <span><i class="dot" style="background:#36e0e0"></i>追い越し中</span>
+    <span><i class="dot" style="background:#ff5d6c"></i>障害物</span>
+    <span><i class="dot" style="background:#9d7bff"></i>横切る人</span>
+    <span><i class="dot" style="background:#ff9d5c"></i>縦方向AGV</span>
+  </div>
+
+  <p class="note">※ 挙動を分かりやすく示すための簡易シミュレーションです。各ロボットは中央の指令ではなく、それぞれ自分の周囲を見て独立に判断しています。交差点は一度に1台だけ通れる（先に近づいた方が優先）譲り合いルールです。</p>
+  <footer>© KRworks — Warehouse AGV Safety Demo</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  const WORLD={w:28,h:6};
+  const HLANES=[1.5,3.0,4.5];
+  const XC=15;                          // 交差点の中心x（縦通路）
+  const BOX={x0:XC-1.0,x1:XC+1.0,y0:0.9,y1:5.1};
+  const LANE_HALF=0.62, AGV_R=0.32, STOP_GAP=0.55, LAT_SPEED=2.0, APPROACH=3.2;
+  let scale=1,padX=16,padY=0,t=0,lastTs=0,passCount=0,yieldCount=0,day=false;
+  let userPaused=false,idlePaused=false,offscreen=false,hiddenTab=false,rafId=null,idleTimer=null;
+  const P={n:4,nv:2,vmax:1.7,safe:1.6,nobs:1,nped:2};
+  const HC=['#39e08a','#5b8cff','#ff7ad9','#7bd0ff','#b0ff6b','#37e0c0'];
+  let agvs=[],obstacles=[],userObs=[],peds=[],bays=[],lastYielders={};
+
+  // テーマ色
+  const TH={
+    night:{floorA:'#0a131f',floorB:'#0c1826',rack:'#0b1827',up:'#21384f',beam:'#2c4a66',
+      grid:'rgba(54,224,224,.05)',lane:'rgba(120,160,190,.18)',arrow:'rgba(54,224,224,.10)',
+      hazard:'rgba(255,207,74,.18)',palletS:['#1c3450','#243a2a','#3a2f1c','#2a2440','#1c3a3a'],
+      boxFill:'rgba(54,224,224,.05)',boxLine:'rgba(54,224,224,.22)'},
+    day:{floorA:'#d7e0e8',floorB:'#cdd8e1',rack:'#c2cdd6',up:'#9fb0bd',beam:'#8aa0b0',
+      grid:'rgba(20,90,110,.08)',lane:'rgba(70,100,120,.30)',arrow:'rgba(12,143,155,.16)',
+      hazard:'rgba(220,160,20,.30)',palletS:['#b9c6d2','#bcc9b6','#cabfa6','#c2b8d0','#a9c6c6'],
+      boxFill:'rgba(12,143,155,.07)',boxLine:'rgba(12,143,155,.3)'}
+  };
+  const C=()=>day?TH.day:TH.night;
+
+  function resize(){const w=cv.clientWidth;cv.width=w;cv.height=Math.round(w*470/952);
+    padX=16;scale=(cv.width-padX*2)/WORLD.w;padY=(cv.height-WORLD.h*scale)/2;}
+  const X=mx=>padX+mx*scale, Y=my=>padY+my*scale;
+
+  function reset(){
+    t=0;passCount=0;yieldCount=0;lastYielders={};agvs=[];
+    for(let i=0;i<P.n;i++) agvs.push({ori:'H',x:0.6+1.7*i,y:HLANES[1],pref:1,tgtY:HLANES[1],v:0,
+      col:HC[i%HC.length],name:'H'+(i+1),trail:[],stopped:false,changing:false,waiting:false,
+      vf:0.85+0.30*((i*7)%5)/4,passed:{}});
+    for(let i=0;i<P.nv;i++) agvs.push({ori:'V',x:XC,y:-1.2-2.4*i,v:0,col:'#ff9d5c',name:'V'+(i+1),
+      trail:[],stopped:false,changing:false,waiting:false,vf:0.9,passed:{}});
+    obstacles=[];const spots=[[11,1],[19,0],[22,2],[8,2]];
+    for(let i=0;i<P.nobs;i++) obstacles.push({x:spots[i][0],y:HLANES[spots[i][1]],r:0.45});
+    peds=[];const px=[7,12,20,24,17];
+    for(let i=0;i<P.nped;i++){const d=(i%2)?1:-1;peds.push({x:px[i],y:d>0?-0.9:WORLD.h+0.9,dir:d,speed:0.8+0.5*((i*3)%4)/3});}
+    bays=[{x:4,top:true,ph:0},{x:24,top:true,ph:2},{x:9,top:false,ph:1},{x:21,top:false,ph:3.5}];
+  }
+
+  function eachObs(cb){for(const o of obstacles)cb(o.x,o.y,o.r);for(const o of userObs)cb(o.x,o.y,o.r);}
+
+  // 進行方向前方のクリアランス
+  function gapAhead(a, ax, ay){
+    ax=(ax===undefined)?a.x:ax; ay=(ay===undefined)?a.y:ay;
+    let gap=Infinity;
+    const H=(a.ori==='H');
+    const add=(hx,hy,hr)=>{
+      if(H){ if(Math.abs(hy-ay)>LANE_HALF) return; const d=(hx-ax)-(hr+AGV_R); if(hx>ax-0.05&&d<gap)gap=d; }
+      else { if(Math.abs(hx-ax)>LANE_HALF) return; const d=(hy-ay)-(hr+AGV_R); if(hy>ay-0.05&&d<gap)gap=d; }
+    };
+    eachObs(add);
+    for(const p of peds) add(p.x,p.y,0.32);
+    for(const b of agvs){ if(b!==a) add(b.x,b.y,AGV_R); }
+    // 交差点で待つべきなら、入口に仮想の停止線を置く
+    if(a.waiting){ if(H) add(BOX.x0,ay,0.05); else add(a.x,BOX.y0,0.05); }
+    return gap;
+  }
+  function laneClear(a, laneY){
+    for(const b of agvs){ if(b===a)continue; if(Math.abs(b.y-laneY)<LANE_HALF*1.1 && b.x>a.x-0.8 && b.x<a.x+1.9) return false; }
+    let ok=true; eachObs((ox,oy,or)=>{ if(Math.abs(oy-laneY)<LANE_HALF && ox>a.x-0.3 && ox<a.x+2.2) ok=false; });
+    return ok;
+  }
+  const inBox=a=>a.x>BOX.x0-AGV_R&&a.x<BOX.x1+AGV_R&&a.y>BOX.y0-AGV_R&&a.y<BOX.y1+AGV_R;
+  const distToBox=a=>a.ori==='H'?(BOX.x0-AGV_R)-a.x:(BOX.y0-AGV_R)-a.y;
+
+  function reserveIntersection(){
+    let occupant=null; for(const a of agvs) if(inBox(a)){occupant=a;break;}
+    let grantee=null;
+    if(!occupant){ let best=Infinity;
+      for(const a of agvs){ const d=distToBox(a); if(d>-0.05 && d<APPROACH && d<best){best=d;grantee=a;} } }
+    for(const a of agvs){
+      const d=distToBox(a), approaching=(d>-0.05 && d<APPROACH);
+      const mayGo=(a===occupant)||(a===grantee)||(!approaching);
+      const w=approaching && !mayGo;
+      if(w && !a.waiting && !lastYielders[a.name]){ yieldCount++; lastYielders[a.name]=true; }
+      if(!approaching) lastYielders[a.name]=false;
+      a.waiting=w;
+    }
+  }
+
+  function step(dt){
+    for(const p of peds){p.y+=p.dir*p.speed*dt;if(p.y>WORLD.h+0.9)p.dir=-1;if(p.y<-0.9)p.dir=1;}
+    for(const b of bays) b.ph+=dt*0.8;
+    reserveIntersection();
+    for(const a of agvs){
+      if(a.ori==='H'){
+        const curGap=gapAhead(a,a.x,a.y);
+        if(curGap<P.safe){ let best=a.y,bestGap=curGap;
+          for(const ly of HLANES){ if(Math.abs(ly-a.y)<0.05)continue; if(!laneClear(a,ly))continue;
+            const g=gapAhead(a,a.x,ly); if(g>bestGap+0.9){bestGap=g;best=ly;} }
+          a.tgtY=best;
+        } else { const pref=HLANES[a.pref]; a.tgtY=(Math.abs(a.y-pref)>0.05&&laneClear(a,pref))?pref:a.y; }
+        const dy=a.tgtY-a.y,mv=Math.max(-LAT_SPEED*dt,Math.min(LAT_SPEED*dt,dy));
+        a.y+=mv; a.changing=Math.abs(a.tgtY-a.y)>0.06;
+      }
+      const g=gapAhead(a,a.x,a.y);
+      let target=g<=STOP_GAP?0:g>=P.safe?P.vmax*a.vf:P.vmax*a.vf*(g-STOP_GAP)/(P.safe-STOP_GAP);
+      const rate=(target<a.v)?6.0:1.8;
+      a.v+=(target-a.v)*Math.min(1,rate*dt); if(a.v<0.01)a.v=0;
+      if(a.ori==='H') a.x+=a.v*dt; else a.y+=a.v*dt;
+      a.stopped=(a.v<0.05);
+      if(a.ori==='H' && a.x>WORLD.w+1){a.x=-1.0;a.y=HLANES[a.pref];a.tgtY=a.y;a.trail.length=0;a.passed={};}
+      if(a.ori==='V' && a.y>WORLD.h+1.6){a.y=-1.5;a.trail.length=0;}
+      a.trail.push([a.x,a.y]); if(a.trail.length>110)a.trail.shift();
+    }
+    for(const a of agvs) for(const b of agvs){ if(a===b||a.ori!=='H'||b.ori!=='H')continue;
+      if(!a.passed[b.name]&&a.x>b.x+0.5&&Math.abs(a.y-b.y)>LANE_HALF*0.5&&b.x>0.5){a.passed[b.name]=true;passCount++;} }
+    t+=dt;
+  }
+
+  // ── 背景 ───────────────────────────────────────────────
+  function pallet(x,y,w,h,hue){const c=C();ctx.fillStyle=hue;ctx.fillRect(X(x),Y(y),w*scale,h*scale);
+    ctx.strokeStyle='rgba(0,0,0,.30)';ctx.lineWidth=1;ctx.strokeRect(X(x),Y(y),w*scale,h*scale);
+    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.beginPath();ctx.moveTo(X(x),Y(y+h*0.5));ctx.lineTo(X(x+w),Y(y+h*0.5));ctx.stroke();}
+  function rackRow(yTop,yBot){const c=C();
+    for(let x=0;x<WORLD.w;x+=1.4){
+      if(x+1.4>XC-1.1 && x<XC+1.1) continue;          // 交差点は開ける
+      ctx.fillStyle=c.rack;ctx.fillRect(X(x),Y(yTop),1.4*scale,(yBot-yTop)*scale);
+      pallet(x+0.15,yTop+0.18,1.1,(yBot-yTop)-0.36,c.palletS[(Math.floor(x))%c.palletS.length]);
+      ctx.strokeStyle=c.up;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(x),Y(yTop));ctx.lineTo(X(x),Y(yBot));ctx.stroke();
+    }
+    const beam=(yTop<WORLD.h/2)?yBot:yTop;ctx.strokeStyle=c.beam;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(X(0),Y(beam));ctx.lineTo(X(XC-1.1),Y(beam));ctx.moveTo(X(XC+1.1),Y(beam));ctx.lineTo(X(WORLD.w),Y(beam));ctx.stroke();
+  }
+  function hazardEdge(y){const c=C();const s=0.5;
+    for(let x=0;x<WORLD.w;x+=s*2){ if(x>XC-1.1&&x<XC+1.1)continue;
+      ctx.fillStyle=c.hazard;ctx.beginPath();
+      ctx.moveTo(X(x),Y(y));ctx.lineTo(X(x+s),Y(y));ctx.lineTo(X(x+s+0.18),Y(y+0.12));ctx.lineTo(X(x+0.18),Y(y+0.12));ctx.closePath();ctx.fill();}
+  }
+  function bayAnim(b){ // 棚からの荷物出し入れ
+    const c=C();const s=0.5+0.5*Math.sin(b.ph);const reach=s*0.5;
+    const y=b.top? -0.05 : WORLD.h+0.05; const dir=b.top?1:-1;
+    ctx.fillStyle=day?'#9aa9b6':'#3a4f63';
+    ctx.fillRect(X(b.x-0.35),Y(y),0.7*scale,reach*dir*scale);
+    ctx.strokeStyle='rgba(54,224,224,.4)';ctx.lineWidth=1;ctx.strokeRect(X(b.x-0.35),Y(y),0.7*scale,reach*dir*scale);
+  }
+  function drawWarehouse(){
+    const c=C();ctx.clearRect(0,0,cv.width,cv.height);
+    const fg=ctx.createLinearGradient(0,Y(0),0,Y(WORLD.h));
+    fg.addColorStop(0,c.floorA);fg.addColorStop(.5,c.floorB);fg.addColorStop(1,c.floorA);
+    ctx.fillStyle=fg;ctx.fillRect(X(0),Y(0),WORLD.w*scale,WORLD.h*scale);
+    // 縦通路（交差点の上下に伸ばす）
+    ctx.fillStyle=c.floorB;ctx.fillRect(X(XC-1.0),Y(-1.6),2.0*scale,(WORLD.h+3.2)*scale);
+    rackRow(-1.5,-0.05);rackRow(WORLD.h+0.05,WORLD.h+1.6);
+    for(const b of bays) bayAnim(b);
+    ctx.strokeStyle=c.grid;ctx.lineWidth=1;
+    for(let x=0;x<=WORLD.w;x+=1){ctx.beginPath();ctx.moveTo(X(x),Y(0));ctx.lineTo(X(x),Y(WORLD.h));ctx.stroke();}
+    hazardEdge(-0.02);hazardEdge(WORLD.h-0.10);
+    // 横車線
+    ctx.strokeStyle=c.lane;ctx.setLineDash([10,12]);ctx.lineWidth=1.4;
+    for(const ly of HLANES){ctx.beginPath();ctx.moveTo(X(0),Y(ly));ctx.lineTo(X(XC-1.1),Y(ly));ctx.moveTo(X(XC+1.1),Y(ly));ctx.lineTo(X(WORLD.w),Y(ly));ctx.stroke();}
+    // 縦車線
+    ctx.beginPath();ctx.moveTo(X(XC),Y(-1.6));ctx.lineTo(X(XC),Y(BOX.y0));ctx.moveTo(X(XC),Y(BOX.y1));ctx.lineTo(X(XC),Y(WORLD.h+1.6));ctx.stroke();
+    ctx.setLineDash([]);
+    // 交差点ボックス
+    ctx.fillStyle=c.boxFill;ctx.fillRect(X(BOX.x0),Y(BOX.y0),(BOX.x1-BOX.x0)*scale,(BOX.y1-BOX.y0)*scale);
+    ctx.strokeStyle=c.boxLine;ctx.lineWidth=1.4;ctx.setLineDash([6,6]);
+    ctx.strokeRect(X(BOX.x0),Y(BOX.y0),(BOX.x1-BOX.x0)*scale,(BOX.y1-BOX.y0)*scale);ctx.setLineDash([]);
+    // 方向矢印
+    ctx.fillStyle=c.arrow;
+    for(const ly of HLANES)for(let x=1.2;x<WORLD.w;x+=4){ if(x>XC-1.4&&x<XC+1.4)continue;
+      ctx.beginPath();ctx.moveTo(X(x),Y(ly-0.18));ctx.lineTo(X(x+0.45),Y(ly));ctx.lineTo(X(x),Y(ly+0.18));ctx.closePath();ctx.fill();}
+  }
+  function drawObstacle(o){const px=X(o.x),py=Y(o.y),r=o.r*scale;
+    ctx.fillStyle='rgba(255,93,108,.16)';ctx.beginPath();ctx.arc(px,py,r*1.6,0,7);ctx.fill();
+    ctx.fillStyle='#ff5d6c';ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();
+    ctx.fillStyle='#240b0e';ctx.font='700 '+(r*0.95|0)+'px var(--sans)';ctx.textAlign='center';ctx.fillText('!',px,py+r*0.34);}
+  function drawPed(p){const px=X(p.x),py=Y(p.y);
+    ctx.fillStyle='rgba(157,123,255,.16)';ctx.beginPath();ctx.arc(px,py,0.5*scale,0,7);ctx.fill();
+    ctx.fillStyle='#9d7bff';ctx.beginPath();ctx.arc(px,py-0.14*scale,0.15*scale,0,7);ctx.fill();
+    ctx.fillRect(px-0.10*scale,py-0.02*scale,0.20*scale,0.34*scale);}
+  function drawAGV(a){const px=X(a.x),py=Y(a.y),r=AGV_R*scale;
+    ctx.strokeStyle=a.stopped?'rgba(255,207,74,.55)':a.changing?'rgba(54,224,224,.6)':'rgba(120,200,220,.28)';
+    ctx.setLineDash([4,5]);ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(px,py,P.safe*scale*0.5+r,0,7);ctx.stroke();ctx.setLineDash([]);
+    if(a.trail.length>1){ctx.strokeStyle=a.col;ctx.globalAlpha=.30;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(X(a.trail[0][0]),Y(a.trail[0][1]));for(const[tx,ty]of a.trail)ctx.lineTo(X(tx),Y(ty));ctx.stroke();ctx.globalAlpha=1;}
+    const col=a.stopped?'#ffcf4a':(a.changing&&a.ori==='H')?'#36e0e0':a.col;
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=12;
+    ctx.beginPath();
+    if(a.ori==='H'){ctx.moveTo(px+r,py);ctx.lineTo(px-r*0.7,py-r*0.78);ctx.lineTo(px-r*0.7,py+r*0.78);}
+    else{ctx.moveTo(px,py+r);ctx.lineTo(px-r*0.78,py-r*0.7);ctx.lineTo(px+r*0.78,py-r*0.7);}
+    ctx.closePath();ctx.fill();ctx.shadowBlur=0;}
+  function draw(){
+    drawWarehouse();
+    for(const o of obstacles)drawObstacle(o);
+    for(const o of userObs)drawObstacle(o);
+    for(const p of peds)drawPed(p);
+    for(const a of agvs)drawAGV(a);
+    const run=agvs.filter(a=>!a.stopped).length;
+    document.getElementById('hT').textContent=t.toFixed(1);
+    document.getElementById('hRun').textContent=run;
+    document.getElementById('hStop').textContent=agvs.length-run;
+    document.getElementById('hPass').textContent=passCount;
+    document.getElementById('hYield').textContent=yieldCount;
+  }
+  const isActive=()=>!userPaused&&!idlePaused&&!offscreen&&!hiddenTab;
+  function loop(ts){
+    if(!lastTs)lastTs=ts; let dt=(ts-lastTs)/1000; lastTs=ts; if(dt>0.05)dt=0.05;
+    if(isActive()){ step(dt); draw(); rafId=requestAnimationFrame(loop); }
+    else { draw(); rafId=null; }            // 非アクティブ時は次フレームを要求しない（省電力）
+  }
+  function ensureRunning(){ if(rafId===null && isActive()){ lastTs=0; rafId=requestAnimationFrame(loop); } }
+  const resumeEl=document.getElementById('resume');
+  const showResume=()=>{resumeEl.style.display='flex';}, hideResume=()=>{resumeEl.style.display='none';};
+  function resetIdle(){
+    if(idleTimer) clearTimeout(idleTimer);
+    if(idlePaused){ idlePaused=false; hideResume(); }
+    idleTimer=setTimeout(()=>{ if(userPaused)return; idlePaused=true; showResume(); }, 90000);  // 90秒無操作で一時停止
+  }
+  function afterInteract(){ resetIdle(); ensureRunning(); if(!isActive()) draw(); }
+
+  // クリック/タップで障害物追加
+  cv.addEventListener('pointerdown',e=>{
+    const rect=cv.getBoundingClientRect();
+    const mx=((e.clientX-rect.left)*(cv.width/rect.width)-padX)/scale;
+    const my=((e.clientY-rect.top)*(cv.height/rect.height)-padY)/scale;
+    if(my>0.3&&my<WORLD.h-0.3&&mx>0.3&&mx<WORLD.w-0.3){
+      if(userObs.length>=4) userObs.shift();   // 最大4個（古いものから入れ替え）
+      userObs.push({x:mx,y:my,r:0.4});
+    }
+    afterInteract();
+  });
+  resumeEl.addEventListener('click',()=>{ resetIdle(); ensureRunning(); });
+
+  function bind(id,key,valId,fmt){const el=document.getElementById(id),out=document.getElementById(valId);
+    el.addEventListener('input',()=>{P[key]=parseFloat(el.value);out.textContent=fmt?fmt(P[key]):el.value;
+      if(key==='n'||key==='nv'||key==='nobs'||key==='nped')reset(); afterInteract();});}
+  bind('sN','n','vN',v=>v|0);bind('sNV','nv','vNV',v=>v|0);bind('sV','vmax','vV',v=>v.toFixed(1));
+  bind('sD','safe','vD',v=>v.toFixed(1));bind('sO','nobs','vO',v=>v|0);bind('sP','nped','vP',v=>v|0);
+  document.getElementById('bRun').addEventListener('click',()=>{ userPaused=!userPaused; if(!userPaused){resetIdle();ensureRunning();} else {hideResume();draw();} });
+  document.getElementById('bReset').addEventListener('click',()=>{userObs=[];reset();userPaused=false;idlePaused=false;hideResume();resetIdle();ensureRunning();});
+  document.getElementById('bClear').addEventListener('click',()=>{userObs=[];afterInteract();});
+  document.getElementById('bTheme').addEventListener('click',()=>{day=!day;document.body.classList.toggle('day',day);if(!isActive())draw();});
+
+  // タブ非表示・画面外で自動停止
+  document.addEventListener('visibilitychange',()=>{ hiddenTab=document.hidden; if(!hiddenTab) ensureRunning(); });
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(es=>{ offscreen=!es[0].isIntersecting; if(!offscreen) ensureRunning(); },{threshold:0.08})
+      .observe(document.querySelector('.stage'));
+  }
+  window.addEventListener('resize',resize);
+  resize();reset();resetIdle();ensureRunning();
+})();
+</script>
+</body>
+</html>
