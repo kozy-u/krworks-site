@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KR works LLC</title>
+<meta name="description" content="KR works LLC - AI安全性技術の研究開発とグローバルコマース事業">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=M+PLUS+1+Code:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07080c;
+  --bg2: #0c0e16;
+  --bg3: #11141f;
+  --cyan: #00f0ff;
+  --cyan-dim: rgba(0,240,255,0.15);
+  --cyan-glow: rgba(0,240,255,0.4);
+  --blue: #2463ff;
+  --blue-dim: rgba(36,99,255,0.12);
+  --purple: #8b5cf6;
+  --magenta: #f0abfc;
+  --text: #e0e6ef;
+  --text-dim: #6b7a90;
+  --text-bright: #ffffff;
+  --grid: rgba(0,240,255,0.04);
+  --border: rgba(0,240,255,0.1);
+}
+
+/* シミュレータ・デモへの導線ボタン */
+.demo-cta{
+  display:inline-flex;align-items:center;gap:10px;margin-top:30px;
+  font-family:'Orbitron',sans-serif;font-weight:500;font-size:14px;letter-spacing:.12em;
+  color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));
+  text-decoration:none;padding:15px 26px;border-radius:10px;
+  box-shadow:0 0 24px -4px var(--cyan-glow);transition:transform .15s, box-shadow .15s;
+}
+.demo-cta:hover{transform:translateY(-2px);box-shadow:0 0 36px -2px var(--cyan-glow)}
+.demo-cta .arrow{font-size:12px}
+.biz-demo-link{
+  display:inline-flex;align-items:center;gap:7px;margin-top:14px;
+  font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:.06em;
+  color:var(--cyan);text-decoration:none;border-bottom:1px solid var(--cyan-dim);padding-bottom:2px;transition:.15s;
+}
+.biz-demo-link:hover{color:var(--text-bright);border-color:var(--cyan)}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'M PLUS 1', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(0deg, transparent 95%, var(--grid) 95%),
+    linear-gradient(90deg, transparent 95%, var(--grid) 95%);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Nav ── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(7,8,12,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+nav .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+.logo {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--text-bright);
+  text-decoration: none;
+}
+.logo span {
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan-glow);
+}
+.nav-links { display: flex; gap: 28px; list-style: none; }
+.nav-links a {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  transition: color 0.3s, text-shadow 0.3s;
+}
+.nav-links a:hover {
+  color: var(--cyan);
+  text-shadow: 0 0 12px var(--cyan-glow);
+}
+
+/* ── Hero ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+#heroCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+}
+.hero-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  text-shadow: 0 0 16px var(--cyan-glow);
+  margin-bottom: 20px;
+  display: inline-block;
+  border: 1px solid var(--cyan-dim);
+  padding: 4px 16px;
+  border-radius: 2px;
+}
+.hero h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(26px, 5vw, 44px);
+  font-weight: 900;
+  line-height: 1.25;
+  color: var(--text-bright);
+  margin-bottom: 24px;
+  letter-spacing: 1px;
+}
+.hero h1 .accent {
+  background: linear-gradient(135deg, var(--cyan), var(--blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 2;
+  max-width: 480px;
+}
+.scroll-hint {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  animation: pulse 2s ease-in-out infinite;
+}
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, var(--cyan), transparent);
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ── Section ── */
+section { padding: 100px 0; }
+
+.section-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan-glow);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 48px;
+  letter-spacing: 1px;
+}
+.divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* ── Biz Cards ── */
+.biz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+.biz-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 32px 28px;
+  background: var(--bg2);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+.biz-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.biz-card:hover {
+  border-color: rgba(0,240,255,0.3);
+  box-shadow: 0 0 40px rgba(0,240,255,0.06), inset 0 0 40px rgba(0,240,255,0.02);
+}
+.biz-card:hover::before { opacity: 1; }
+.biz-card-num {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 56px;
+  font-weight: 900;
+  color: rgba(0,240,255,0.04);
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  line-height: 1;
+}
+.biz-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text-bright);
+}
+.biz-card p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.9;
+}
+.biz-tag {
+  display: inline-block;
+  margin-top: 18px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--cyan);
+  border: 1px solid var(--cyan-dim);
+  padding: 3px 12px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+/* ── Info Table ── */
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.info-table tr {
+  border-bottom: 1px solid rgba(0,240,255,0.06);
+}
+.info-table th {
+  text-align: left;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim);
+  padding: 18px 0;
+  width: 140px;
+  vertical-align: top;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.info-table td {
+  font-size: 15px;
+  color: var(--text);
+  padding: 18px 0;
+}
+
+/* ── Form ── */
+.form-wrap { max-width: 520px; }
+.form-row { margin-bottom: 20px; }
+.form-row label {
+  display: block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.req { color: var(--cyan); }
+.form-row input,
+.form-row textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: 'M PLUS 1', sans-serif;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.form-row input:focus,
+.form-row textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0,240,255,0.08);
+}
+.form-row input::placeholder,
+.form-row textarea::placeholder {
+  color: rgba(107,122,144,0.5);
+}
+.form-row textarea { resize: vertical; }
+.form-wrap button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 32px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--cyan);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: box-shadow 0.3s, transform 0.1s;
+}
+.form-wrap button:hover {
+  box-shadow: 0 0 24px var(--cyan-glow), 0 0 60px rgba(0,240,255,0.15);
+}
+.form-wrap button:active { transform: scale(0.97); }
+
+/* ── Footer ── */
+footer {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+}
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footer-copy {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.footer-loc {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .hero { min-height: 100svh; }
+  section { padding: 64px 0; }
+  .info-table th { width: 100px; }
+}
+
+/* ── Fade In ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="#" class="logo">KR<span>works</span></a>
+    <ul class="nav-links">
+      <li><a href="#business">Business</a></li>
+      <li><a href="agv_demo.html">Demo</a></li>
+      <li><a href="#company">Company</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <canvas id="heroCanvas"></canvas>
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-tag">// KR works LLC</div>
+      <h1>Building the<br><span class="accent">trust layer</span><br>for technology</h1>
+      <p>AI安全性技術の研究開発とグローバルコマース事業を通じて、人と技術が共存する社会基盤の構築に取り組んでいます。</p>
+      <a href="agv_demo.html" class="demo-cta">倉庫AGV 安全走行デモを見る <span class="arrow">▶</span></a>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</header>
+
+<hr class="divider">
+
+<section id="business">
+  <div class="container">
+    <div class="section-label">// Business</div>
+    <h2 class="section-title">事業内容</h2>
+    <div class="biz-grid">
+      <div class="biz-card reveal">
+        <div class="biz-card-num">01</div>
+        <h3>AI安全性技術の研究開発</h3>
+        <p>AIシステムの出力を物理法則に基づいてリアルタイムに監査する技術を研究開発しています。車両・医療・電力・製造など多分野での応用を目指し、研究・開発を進めています。</p>
+        <span class="biz-tag">R&D / Patent pending</span>
+        <br><a href="agv_demo.html" class="biz-demo-link">倉庫AGV安全走行デモを見る ▶</a>
+      </div>
+      <div class="biz-card reveal">
+        <div class="biz-card-num">02</div>
+        <h3>グローバルコマース事業</h3>
+        <p>日本の価値ある商品を海外市場へ届けるクロスボーダーEC事業を展開しています。越境ECプラットフォームを活用し、グローバルな販路を構築しています。</p>
+        <span class="biz-tag">Cross-border EC</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section id="company">
+  <div class="container">
+    <div class="section-label">// Company</div>
+    <h2 class="section-title">会社概要</h2>
+    <table class="info-table reveal">
+      <tr>
+        <th>Name</th>
+        <td>KR works LLC（合同会社KR works）</td>
+      </tr>
+      <tr>
+        <th>Founded</th>
+        <td>2026年4月</td>
+      </tr>
+      <tr>
+        <th>Location</th>
+        <td>宮崎県</td>
+      </tr>
+      <tr>
+        <th>Business</th>
+        <td>AI安全性技術の研究開発<br>クロスボーダーEC事業</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section id="contact">
+  <div class="container">
+    <div class="section-label">// Contact</div>
+    <h2 class="section-title">お問い合わせ</h2>
+    <p style="font-size: 14px; color: var(--text-dim); line-height: 1.9; margin-bottom: 36px;">
+      事業に関するお問い合わせは、下記フォームよりご連絡ください。
+    </p>
+    <div class="form-wrap reveal">
+      <div class="form-row">
+        <label for="name">お名前 <span class="req">*</span></label>
+        <input type="text" id="name" name="name" required placeholder="山田 太郎">
+      </div>
+      <div class="form-row">
+        <label for="company">会社名</label>
+        <input type="text" id="company" name="company" placeholder="株式会社〇〇">
+      </div>
+      <div class="form-row">
+        <label for="email">メールアドレス <span class="req">*</span></label>
+        <input type="email" id="email" name="email" required placeholder="example@mail.com">
+      </div>
+      <div class="form-row">
+        <label for="message">お問い合わせ内容 <span class="req">*</span></label>
+        <textarea id="message" name="message" rows="5" required placeholder="お問い合わせ内容をご記入ください"></textarea>
+      </div>
+      <button type="button" id="submitBtn">SEND &#9656;</button>
+      <p id="formResult" style="margin-top: 16px; font-size: 13px; display: none;"></p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-inner">
+    <div class="footer-copy">&copy; 2026 KR works LLC</div>
+    <div class="footer-loc">Nobeoka, Miyazaki, Japan</div>
+  </div>
+</footer>
+
+<script>
+// ── Particle Network ──
+(function() {
+  const c = document.getElementById('heroCanvas');
+  const ctx = c.getContext('2d');
+  let w, h, particles, mouse = { x: -1000, y: -1000 };
+
+  function resize() {
+    w = c.width = c.offsetWidth;
+    h = c.height = c.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random() * w;
+      this.y = Math.random() * h;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.r = Math.random() * 1.5 + 0.5;
+      this.pulse = Math.random() * Math.PI * 2;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.pulse += 0.02;
+      if (this.x < -50) this.x = w + 50;
+      if (this.x > w + 50) this.x = -50;
+      if (this.y < -50) this.y = h + 50;
+      if (this.y > h + 50) this.y = -50;
+    }
+    draw() {
+      const glow = 0.4 + Math.sin(this.pulse) * 0.3;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,240,255,${glow})`;
+      ctx.fill();
+    }
+  }
+
+  const count = Math.min(Math.floor(w * h / 8000), 120);
+  particles = Array.from({ length: count }, () => new Particle());
+
+  c.addEventListener('mousemove', e => {
+    const rect = c.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+  c.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+
+  function frame() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 150) {
+          const a = (1 - d / 150) * 0.15;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0,240,255,${a})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Mouse interaction
+    for (const p of particles) {
+      const dx = p.x - mouse.x;
+      const dy = p.y - mouse.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 200) {
+        const a = (1 - d / 200) * 0.25;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.strokeStyle = `rgba(0,240,255,${a})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      p.update();
+      p.draw();
+    }
+
+    // Hex accent shapes (subtle)
+    const t = Date.now() * 0.0003;
+    drawHex(w * 0.75, h * 0.35, 80, t, 0.03);
+    drawHex(w * 0.85, h * 0.6, 50, -t * 1.3, 0.02);
+    drawHex(w * 0.65, h * 0.7, 35, t * 0.8, 0.025);
+
+    requestAnimationFrame(frame);
+  }
+
+  function drawHex(cx, cy, r, rot, alpha) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const x = r * Math.cos(angle);
+      const y = r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(0,240,255,${alpha})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  frame();
+})();
+
+// ── Scroll Reveal ──
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// ── Form ──
+document.getElementById('submitBtn').addEventListener('click', async function() {
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const message = document.getElementById('message').value.trim();
+  const company = document.getElementById('company').value.trim();
+  const result = document.getElementById('formResult');
+
+  if (!name || !email || !message) {
+    result.style.display = 'block';
+    result.style.color = '#f87171';
+    result.textContent = '必須項目をすべてご入力ください。';
+    return;
+  }
+  this.disabled = true;
+  this.textContent = 'SENDING...';
+  try {
+    const res = await fetch('https://formspree.io/f/YOUR_FORM_ID', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ name, company, email, message })
+    });
+    if (res.ok) {
+      result.style.display = 'block';
+      result.style.color = '#00f0ff';
+      result.textContent = 'お問い合わせを受け付けました。ありがとうございます。';
+      ['name','company','email','message'].forEach(id => document.getElementById(id).value = '');
+    } else { throw new Error(); }
+  } catch (e) {
+    result.style.display = 'block';
+    result.style.color = '#f87171';
+    result.textContent = '送信に失敗しました。時間をおいて再度お試しください。';
+  }
+  this.disabled = false;
+  this.textContent = 'SEND \u25B6';
+});
+</script>
+</body>
+</html>
