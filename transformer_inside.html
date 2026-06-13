@@ -102,7 +102,8 @@ function setExample(idx){active=idx;EX=DATA.examples[idx];N=EX.tokens.length;L=E
  conf.innerHTML='<div class="cl">confidence（次トークン確率）</div><div class="cv" id="cv">0%</div><div class="verdict" id="vd"></div>';lensEl.appendChild(conf);
  layerF=0;start=performance.now();sizeCanvas();}
 function sizeOne(c){const dpr=Math.min(window.devicePixelRatio||1,2);const r=c.getBoundingClientRect();
- c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr);const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return {w:r.width,h:r.height};}
+ const w=Math.max(1,Math.round(r.width)),hh=Math.max(1,Math.round(r.height));
+ c.width=Math.round(w*dpr);c.height=Math.round(hh*dpr);const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return {w:w,h:hh};}
 let trajSize={w:1,h:1},attnSize={w:1,h:1};
 function sizeCanvas(){trajSize=sizeOne(cTraj);attnSize=sizeOne(cAttn);const md=Math.min(trajSize.w,trajSize.h);glow=HUES.map(h=>buildGlow(h,Math.max(4,md*0.02)));
  const mx=p=>trajSize.w*0.12+p*trajSize.w*0.76,my=p=>trajSize.h*0.12+p*trajSize.h*0.76;
@@ -139,13 +140,24 @@ function updateLens(){const dl=Math.round(layerF),top5=EX.lens[dl],conf=EX.conf[
  if(bk){bk.textContent=top5[0][0];bk.style.color=conf>0.45?"#7ff6ff":"#fff";}
  lyEl.textContent=dl+" / "+(L-1);scrub.value=String(layerF);}
 let running=true;
-function frame(now){if(running){if(playing)layerF=layerFromElapsed((now-start)%total());drawTraj(now);drawAttn(now);updateLens();}requestAnimationFrame(frame);}
+function frame(now){if(running){
+  if(trajSize.w<10||trajSize.h<10){sizeCanvas();}
+  if(trajSize.w>=10&&trajSize.h>=10){
+    if(playing)layerF=layerFromElapsed((now-start)%total());
+    try{drawTraj(now);drawAttn(now);updateLens();}catch(err){/* keep loop alive */}
+  }
+ }requestAnimationFrame(frame);}
 playBtn.addEventListener("click",()=>{playing=!playing;playBtn.innerHTML=playing?"&#10074;&#10074;":"&#9654;";if(playing)start=performance.now()-elapsedForLayer(layerF);});
 scrub.addEventListener("input",()=>{playing=false;playBtn.innerHTML="&#9654;";layerF=parseFloat(scrub.value);});
 root.querySelectorAll(".tog button").forEach(b=>b.addEventListener("click",()=>{setExample(+b.dataset.ex);playing=true;playBtn.innerHTML="&#10074;&#10074;";}));
 if("IntersectionObserver"in window)new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:.01}).observe(root);
 document.addEventListener("visibilitychange",()=>running=!document.hidden);
 if("ResizeObserver"in window)new ResizeObserver(()=>sizeCanvas()).observe(root);else window.addEventListener("resize",sizeCanvas);
-setExample(0);requestAnimationFrame(frame);
+setExample(0);
+requestAnimationFrame(()=>{sizeCanvas();start=performance.now();});
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(()=>{sizeCanvas();start=performance.now();});}
+window.addEventListener("load",()=>{sizeCanvas();start=performance.now();});
+setTimeout(()=>{sizeCanvas();start=performance.now();},300);
+requestAnimationFrame(frame);
 })();
 </script></body></html>
