@@ -483,6 +483,118 @@
   if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,160); }).observe(root); } else addEventListener("resize",resize);
 
   resize(); loadSample(); showDrop(true); requestAnimationFrame(frame);
+
+  /* ── 画像保存／録画ツール（ブラウザ内のみ・送信なし・公知のCanvas/MediaRecorder API） ── */
+  (function(){
+    const ctrl=root.querySelector('.ctrl'); if(!ctrl||!canvas) return;
+    const css=getComputedStyle(root);
+    const accent=(css.getPropertyValue('--accent')||'#7dd3fc').trim();
+    const bg=(css.getPropertyValue('--bg')||'#07080c').trim();
+    const NAME='dataflock';
+    const rows=ctrl.querySelectorAll('.crow'); const bar=rows[rows.length-1]||ctrl;
+    const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());};
+    function dl(blob,ext){const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='krworks_'+NAME+'_'+stamp()+'.'+ext;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+    // PNG：背景色を敷いて現在のcanvasを合成し、右下に krworks.co.jp の透かしを入れる
+    function savePNG(){
+      const w=canvas.width,h=canvas.height,o=document.createElement('canvas');o.width=w;o.height=h;
+      const g=o.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(canvas,0,0);
+      const dpr=Math.min(devicePixelRatio||1,2);
+      g.textAlign='right';g.textBaseline='bottom';
+      g.font='700 '+(15*dpr)+'px "Share Tech Mono",monospace';g.fillStyle=accent;g.globalAlpha=.92;
+      g.fillText('KR works',w-13*dpr,h-28*dpr);
+      g.font='600 '+(12*dpr)+'px "Share Tech Mono",monospace';g.fillStyle='rgba(255,255,255,.34)';g.globalAlpha=1;
+      g.fillText('krworks.co.jp',w-13*dpr,h-11*dpr);
+      o.toBlob(b=>{if(b)dl(b,'png');},'image/png');
+    }
+    // 録画：MediaRecorder で WebM（5秒）。対応ブラウザのみボタンを表示。
+    let rec=null,chunks=[],recBtn=null,timer=0;
+    const canRec=!!(canvas.captureStream&&window.MediaRecorder&&
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')||MediaRecorder.isTypeSupported('video/webm')));
+    function endRec(){recBtn.textContent='● 録画';recBtn.style.color='';recBtn.style.borderColor='';rec=null;clearTimeout(timer);}
+    function toggleRec(){
+      if(rec){if(rec.state==='recording')rec.stop();return;}
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      let st;try{st=canvas.captureStream(30);}catch(e){return;}
+      chunks=[];rec=new MediaRecorder(st,{mimeType:type,videoBitsPerSecond:6000000});
+      rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=()=>{if(chunks.length)dl(new Blob(chunks,{type}),'webm');endRec();};
+      rec.start();recBtn.textContent='■ 停止';recBtn.style.color=accent;recBtn.style.borderColor=accent;
+      timer=setTimeout(()=>{if(rec&&rec.state==='recording')rec.stop();},5000);
+    }
+    const pngBtn=document.createElement('button');pngBtn.className='chip';pngBtn.type='button';
+    pngBtn.textContent='画像保存';pngBtn.setAttribute('data-act','savepng');
+    pngBtn.title='いまの画面をPNGで保存（送信なし）';pngBtn.addEventListener('click',savePNG);bar.appendChild(pngBtn);
+    if(canRec){recBtn=document.createElement('button');recBtn.className='chip';recBtn.type='button';
+      recBtn.textContent='● 録画';recBtn.setAttribute('data-act','saverec');
+      recBtn.title='5秒間のクリップをWebMで保存（送信なし）';recBtn.addEventListener('click',toggleRec);bar.appendChild(recBtn);}
+  })();
+
+
+  /* ── 業種別プリセット（例題データ・すべてブラウザ内生成／送信なし） ── */
+  (function(){
+    if(typeof ingest!=='function') return;
+    const accent=(getComputedStyle(root).getPropertyValue('--accent')||'#60a5fa').trim();
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    function gauss(m,s){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return m+s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v);}
+    const PRESETS=[
+      {key:'retail',label:'小売売上',make(){
+        const cols=['商品カテゴリ','店舗','売上','数量','利益率'];
+        const cat=['食品','衣料','家電','化粧品','書籍','雑貨'], shop=['新宿','梅田','名古屋','博多','札幌'];
+        const amtM={食品:1200,衣料:3800,家電:22000,化粧品:4500,書籍:1400,雑貨:2400};
+        const qtyM={食品:14,衣料:4,家電:1.6,化粧品:5,書籍:7,雑貨:9};
+        const marM={食品:12,衣料:34,家電:11,化粧品:42,書籍:22,雑貨:28};
+        const d=[];for(let i=0;i<300;i++){const c=cat[i%cat.length],s=shop[(Math.random()*shop.length)|0];
+          const amt=Math.max(100,Math.round(amtM[c]*rnd(0.5,1.6)));
+          const qty=Math.max(1,Math.round(gauss(qtyM[c],qtyM[c]*0.4)));
+          const mar=Math.max(2,marM[c]*rnd(0.7,1.25));
+          d.push([c,s,String(amt),String(qty),mar.toFixed(1)]);}
+        return {cols,data:d};}},
+      {key:'web',label:'Webアクセス',make(){
+        const cols=['流入元','端末','滞在秒','ページ数','直帰率'];
+        const src=['検索','SNS','広告','直接','メール','外部リンク'], dev=['PC','スマホ','タブレット'];
+        const stayM={検索:95,SNS:40,広告:30,直接:150,メール:120,'外部リンク':70};
+        const pvM={検索:3.4,SNS:1.8,広告:1.5,直接:4.5,メール:3.8,'外部リンク':2.6};
+        const brM={検索:48,SNS:72,広告:78,直接:30,メール:38,'外部リンク':58};
+        const d=[];for(let i=0;i<320;i++){const s=src[i%src.length],dv=dev[(Math.random()*dev.length)|0];
+          const stay=Math.max(3,Math.round(gauss(stayM[s],stayM[s]*0.5)));
+          const pv=Math.max(1,Math.round(gauss(pvM[s],1.1)));
+          const br=Math.min(98,Math.max(5,gauss(brM[s],12)));
+          d.push([s,dv,String(stay),String(pv),br.toFixed(0)]);}
+        return {cols,data:d};}},
+      {key:'research',label:'研究データ',make(){
+        const cols=['品種','がく長','がく幅','花弁長','花弁幅'];
+        const sp=[['A',5.0,3.4,1.5,0.25],['B',5.9,2.8,4.3,1.30],['C',6.6,3.0,5.6,2.0]];
+        const d=[];for(let i=0;i<300;i++){const m=sp[i%sp.length];
+          d.push([m[0],gauss(m[1],0.35).toFixed(2),gauss(m[2],0.30).toFixed(2),gauss(m[3],0.40).toFixed(2),gauss(m[4],0.22).toFixed(2)]);}
+        return {cols,data:d};}},
+      {key:'customer',label:'顧客セグメント',make(){return sampleData();}}
+    ];
+    const allBtns=[];
+    function applyPreset(p,btn){
+      const {cols,data}=p.make();
+      ingest(cols,data);
+      if(typeof showDrop==='function') showDrop(false);
+      if(typeof stat2El!=='undefined'&&stat2El) stat2El.textContent='例題：'+p.label;
+      allBtns.forEach(b=>{ b.style.color=''; b.style.borderColor=''; });
+      // 同じ例題のボタンを両ストリップで強調
+      allBtns.filter(b=>b._key===p.key).forEach(b=>{ b.style.color=accent; b.style.borderColor=accent; });
+    }
+    function buildStrip(host, withLabel){
+      if(!host) return;
+      const strip=document.createElement('div'); strip.className='crow'; strip.style.flexWrap='wrap';
+      if(withLabel){ const lab=document.createElement('span'); lab.className='slab'; lab.textContent='例題で試す'; strip.appendChild(lab); }
+      PRESETS.forEach(p=>{ const b=document.createElement('button'); b.className='chip'; b.type='button';
+        b.textContent=p.label; b._key=p.key; b.setAttribute('data-act','preset-'+p.key);
+        b.addEventListener('click',()=>applyPreset(p,b)); strip.appendChild(b); allBtns.push(b); });
+      host.appendChild(strip);
+    }
+    // 投入画面（最初に見える場所）と、操作バー（閲覧中の切替）の両方に置く
+    buildStrip(root.querySelector('#drop .dc'), true);
+    buildStrip(root.querySelector('.ctrl'), true);
+  })();
 })();
 </script>
 </body>

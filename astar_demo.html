@@ -176,6 +176,7 @@
   let W=0,H=0,dpr=1,cell=26,cols=0,rows=0;
   let walls,start,goal;
   let open,came,gScore,fScore,inOpen,closed,path,done,reached;
+  let pathProg=0, pathSpeed=1;   // 最短経路を1マスずつ描くための進捗(マス)と速度
 
   function key(x,y){ return y*cols+x; }
   function inb(x,y){ return x>=0&&y>=0&&x<cols&&y<rows; }
@@ -183,7 +184,7 @@
 
   function resetSearch(){
     open=[]; came=new Map(); gScore=new Map(); fScore=new Map();
-    inOpen=new Set(); closed=new Set(); path=null; done=false; reached=false;
+    inOpen=new Set(); closed=new Set(); path=null; done=false; reached=false; pathProg=0;
     const s=key(start.x,start.y);
     gScore.set(s,0); fScore.set(s,heuristic(start.x,start.y));
     open.push(s); inOpen.add(s);
@@ -220,6 +221,7 @@
     const p=[end]; let c=end;
     while(came.has(c)){ c=came.get(c); p.push(c); }
     path=p.reverse();
+    pathProg=0; pathSpeed=Math.max(0.6, path.length/72);   // 経路の長さによらず約1.2秒で描き切る
   }
 
   /* ── 迷路生成（ランダム障害物＋少しの構造） ── */
@@ -259,13 +261,21 @@
     // walls
     ctx.fillStyle="#1b2330";
     for(const k of walls){ const x=k%cols,y=(k/cols)|0; ctx.fillRect(ox+x*cell+1,oy+y*cell+1,cell-2,cell-2); }
-    // path
-    if(path){
+    // path（スタートからゴールへ1マスずつ伸ばす）
+    if(path && path.length){
+      const cpt=k=>{ const x=k%cols,y=(k/cols)|0; return [ox+x*cell+cell/2, oy+y*cell+cell/2]; };
+      const prog=Math.min(pathProg, path.length-1);
+      const full=Math.floor(prog), frac=prog-full;
       ctx.strokeStyle="#fde047"; ctx.lineWidth=Math.max(3,cell*0.18); ctx.lineCap="round"; ctx.lineJoin="round";
       ctx.shadowColor="rgba(253,224,71,.8)"; ctx.shadowBlur=10;
       ctx.beginPath();
-      path.forEach((k,i)=>{ const x=k%cols,y=(k/cols)|0, px=ox+x*cell+cell/2, py=oy+y*cell+cell/2; i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+      let hx,hy;
+      for(let i=0;i<=full && i<path.length;i++){ const [px,py]=cpt(path[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); hx=px; hy=py; }
+      if(full+1<path.length && frac>0){ const [ax,ay]=cpt(path[full]), [bx,by]=cpt(path[full+1]); hx=ax+(bx-ax)*frac; hy=ay+(by-ay)*frac; ctx.lineTo(hx,hy); }
       ctx.stroke(); ctx.shadowBlur=0;
+      // 描画中は先端を光らせる（伸びている感じ）
+      if(pathProg < path.length-1){ ctx.fillStyle="#fffbe6"; ctx.shadowColor="rgba(253,224,71,1)"; ctx.shadowBlur=16;
+        ctx.beginPath(); ctx.arc(hx,hy,Math.max(3,cell*0.22),0,6.2832); ctx.fill(); ctx.shadowBlur=0; }
     }
     // start / goal
     drawCell(ox,oy,start.x,start.y,"#22c55e");
@@ -289,6 +299,8 @@
         let budget=Math.max(1,Math.floor(acc/6)); acc-=budget*6;
         while(budget-- >0 && !done) stepSearch();
       }
+      // ゴール到達後：最短経路をスタート側から少しずつ伸ばす
+      if(playing && path && pathProg<path.length) pathProg=Math.min(path.length, pathProg+pathSpeed);
       draw();
       statEl.textContent = closed.size + " / " + (path? path.length : (done?"なし":"探索中"));
     }

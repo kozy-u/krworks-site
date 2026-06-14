@@ -507,6 +507,54 @@
   else addEventListener("resize",resize);
 
   resize(); updatePlay(); requestAnimationFrame(frame);
+
+  /* ── 画像保存／録画ツール（ブラウザ内のみ・送信なし・公知のCanvas/MediaRecorder API） ── */
+  (function(){
+    const ctrl=root.querySelector('.ctrl'); if(!ctrl||!canvas) return;
+    const css=getComputedStyle(root);
+    const accent=(css.getPropertyValue('--accent')||'#7dd3fc').trim();
+    const bg=(css.getPropertyValue('--bg')||'#07080c').trim();
+    const NAME='shibuya';
+    const rows=ctrl.querySelectorAll('.crow'); const bar=rows[rows.length-1]||ctrl;
+    const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());};
+    function dl(blob,ext){const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='krworks_'+NAME+'_'+stamp()+'.'+ext;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+    // PNG：背景色を敷いて現在のcanvasを合成し、右下に krworks.co.jp の透かしを入れる
+    function savePNG(){
+      const w=canvas.width,h=canvas.height,o=document.createElement('canvas');o.width=w;o.height=h;
+      const g=o.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(canvas,0,0);
+      const dpr=Math.min(devicePixelRatio||1,2);
+      g.textAlign='right';g.textBaseline='bottom';
+      g.font='700 '+(15*dpr)+'px "Share Tech Mono",monospace';g.fillStyle=accent;g.globalAlpha=.92;
+      g.fillText('KR works',w-13*dpr,h-28*dpr);
+      g.font='600 '+(12*dpr)+'px "Share Tech Mono",monospace';g.fillStyle='rgba(255,255,255,.34)';g.globalAlpha=1;
+      g.fillText('krworks.co.jp',w-13*dpr,h-11*dpr);
+      o.toBlob(b=>{if(b)dl(b,'png');},'image/png');
+    }
+    // 録画：MediaRecorder で WebM（5秒）。対応ブラウザのみボタンを表示。
+    let rec=null,chunks=[],recBtn=null,timer=0;
+    const canRec=!!(canvas.captureStream&&window.MediaRecorder&&
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')||MediaRecorder.isTypeSupported('video/webm')));
+    function endRec(){recBtn.textContent='● 録画';recBtn.style.color='';recBtn.style.borderColor='';rec=null;clearTimeout(timer);}
+    function toggleRec(){
+      if(rec){if(rec.state==='recording')rec.stop();return;}
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      let st;try{st=canvas.captureStream(30);}catch(e){return;}
+      chunks=[];rec=new MediaRecorder(st,{mimeType:type,videoBitsPerSecond:6000000});
+      rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=()=>{if(chunks.length)dl(new Blob(chunks,{type}),'webm');endRec();};
+      rec.start();recBtn.textContent='■ 停止';recBtn.style.color=accent;recBtn.style.borderColor=accent;
+      timer=setTimeout(()=>{if(rec&&rec.state==='recording')rec.stop();},5000);
+    }
+    const pngBtn=document.createElement('button');pngBtn.className='chip';pngBtn.type='button';
+    pngBtn.textContent='画像保存';pngBtn.setAttribute('data-act','savepng');
+    pngBtn.title='いまの画面をPNGで保存（送信なし）';pngBtn.addEventListener('click',savePNG);bar.appendChild(pngBtn);
+    if(canRec){recBtn=document.createElement('button');recBtn.className='chip';recBtn.type='button';
+      recBtn.textContent='● 録画';recBtn.setAttribute('data-act','saverec');
+      recBtn.title='5秒間のクリップをWebMで保存（送信なし）';recBtn.addEventListener('click',toggleRec);bar.appendChild(recBtn);}
+  })();
 })();
 </script>
 </body>
