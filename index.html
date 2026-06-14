@@ -672,14 +672,17 @@ const obs = new IntersectionObserver((entries) => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.15 });
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
 
+<script>
 // ── Form ──
 document.getElementById('submitBtn').addEventListener('click', async function() {
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim();
   const message = document.getElementById('message').value.trim();
   const company = document.getElementById('company').value.trim();
-  const gotcha = document.getElementById('_gotcha').value;
+  const gotchaEl = document.getElementById('_gotcha');
+  const gotcha = gotchaEl ? gotchaEl.value : '';
   const emailEl = document.getElementById('email');
   const result = document.getElementById('formResult');
 
