@@ -524,6 +524,7 @@ footer {
         <label for="message">お問い合わせ内容 <span class="req">*</span></label>
         <textarea id="message" name="message" rows="5" required placeholder="お問い合わせ内容をご記入ください"></textarea>
       </div>
+      <input type="text" id="_gotcha" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
       <button type="button" id="submitBtn">SEND &#9656;</button>
       <p id="formResult" style="margin-top: 16px; font-size: 13px; display: none;"></p>
     </div>
@@ -670,6 +671,8 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
   const email = document.getElementById('email').value.trim();
   const message = document.getElementById('message').value.trim();
   const company = document.getElementById('company').value.trim();
+  const gotcha = document.getElementById('_gotcha').value;
+  const emailEl = document.getElementById('email');
   const result = document.getElementById('formResult');
 
   if (!name || !email || !message) {
@@ -678,13 +681,19 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
     result.textContent = '必須項目をすべてご入力ください。';
     return;
   }
+  if (!emailEl.checkValidity()) {
+    result.style.display = 'block';
+    result.style.color = '#f87171';
+    result.textContent = 'メールアドレスの形式をご確認ください。';
+    return;
+  }
   this.disabled = true;
   this.textContent = 'SENDING...';
   try {
-    const res = await fetch('https://formspree.io/f/YOUR_FORM_ID', {
+    const res = await fetch('https://formspree.io/f/mqejoblo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ name, company, email, message })
+      body: JSON.stringify({ name, company, email, message, _gotcha: gotcha })
     });
     if (res.ok) {
       result.style.display = 'block';
