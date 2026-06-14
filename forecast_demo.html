@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>優勝確率の可視化 — モンテカルロ・シミュレーション | KR works LLC</title>
+<meta name="description" content="各チームの仮の強さから、トーナメントを何千回もシミュレートして優勝確率を棒グラフで可視化した教育・演出デモ。モンテカルロ法とロジスティック型の勝率など公知アルゴリズムのみ、ブラウザ内完結で、LogicLock・保存則・実際の予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#a78bfa; --accentG:rgba(167,139,250,.45);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(167,139,250,.07) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#07080e 0%,#090b14 60%,#0b0e18 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:52ch;}
+  @media(min-width:900px){#stage .head{max-width:33vw;right:auto;}}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(167,139,250,.07);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.4rem,1rem+1.6vw,2.4rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);margin-top:4px;min-height:1.1em;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}
+    #stage h1{font-size:1.12rem;margin-bottom:.35em;}
+    #stage .sub{font-size:.72rem;line-height:1.55;}
+    #stage .honest{font-size:.62rem;margin-top:8px;padding:5px 11px;}}
+
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,196px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;max-width:62ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:3px;flex:none;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+  @media(min-width:900px){#stage .legend{left:auto;right:clamp(16px,3vw,34px);max-width:40ch;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(95%,940px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(167,139,250,.14);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(167,139,250,.24);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .field{display:flex;align-items:center;gap:8px;flex:1;min-width:210px;}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(167,139,250,.24);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(167,139,250,.12);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:620px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(167,139,250,.14);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(167,139,250,.24);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="各チームの仮の強さからトーナメントを何千回もシミュレートし、優勝確率を棒グラフで可視化した教育・演出デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Monte Carlo ／ 優勝確率</p>
+    <h1>優勝するのは？ を、確率で見る</h1>
+    <p class="sub">各チームに<b>仮の強さ</b>を与え、トーナメントを<b>何千回もくり返しシミュレート</b>して、優勝した回数の割合＝<b>優勝確率</b>を棒で表します。<b>実力差の効き</b>を動かすと、番狂わせの起きやすさが変わって分布が動きます。チームを<b>クリック</b>すると各ラウンドの到達率が見られます。</p>
+    <span class="honest"><i class="dot"></i>モンテカルロ法の演出・強さは仮の概形・実際の予測ではありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">Simulations</div>
+    <div class="pv" data-n>0</div>
+    <div class="pv2" data-lead>シミュレーション準備中</div>
+  </div>
+
+  <div class="legend" data-legend aria-hidden="true">
+    <span><i style="background:var(--accent)"></i>棒の長さ＝確率（％は実数）</span>
+    <span style="color:var(--faint)">色＝チーム／クリックで詳細</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">&#10074;&#10074;</button>
+      <div class="field"><span class="slab">実力差の効き　混戦<b></b>順当</span><input class="scrub" type="range" data-scale min="0" max="100" value="72" aria-label="実力差の効き"></div>
+      <button class="chip" data-act="reset">リセット</button>
+    </div>
+    <div class="crow">
+      <span class="slab">表示：</span>
+      <button class="tog" data-mode="champ" aria-pressed="true">優勝確率</button>
+      <button class="tog" data-mode="sf" aria-pressed="false">ベスト4到達</button>
+      <span class="slab" style="margin-left:6px">例題：</span>
+      <button class="chip" data-preset="92">実力どおり</button>
+      <button class="chip" data-preset="20">ガチ混戦</button>
+      <span class="spacer"></span>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「確率予測の見せ方」のデモです</h2>
+      <p>「優勝する確率○％」のような数字は、たいてい<b>たくさんの試行のうち何回そうなったか</b>から出します。本デモはその過程をそのまま動かします（<b>モンテカルロ法</b>）。</p>
+      <ul>
+        <li>各チームに<b>仮の強さ</b>（参考値の概形）を与えます。</li>
+        <li>2チームの<b>強さの差</b>から、1試合の勝率を<b>ロジスティック型（Elo式）</b>で計算します。</li>
+        <li>その勝率で勝者を乱数で決め、トーナメントを<b>最後まで</b>シミュレートします。</li>
+        <li>これを<b>何千回</b>くり返し、各国が優勝した割合を<b>優勝確率</b>として棒にします。回数を増やすほど数字が安定します。</li>
+        <li><b>実力差の効き</b>を弱めると番狂わせが増え、強めると実力どおりに収束します。</li>
+      </ul>
+      <p>使っているのは<b>モンテカルロ法</b>と<b>ロジスティック型の勝率</b>という<b>公知アルゴリズム</b>だけです。強さは<b>例示値（公開Eloの傾向を参考にした概形）</b>で、実データに差し替え可能。これは確率の<b>見せ方の演出・教育</b>であり、特定の大会の<b>予測や分析ではありません</b>。</p>
+      <p>本デモは<b>教育・演出目的</b>で、当社の LogicLock／保存則監査や、何かの予測・分析とは<b>無関係</b>です。すべてブラウザ内で動作し、外部送信はありません。</p>
+      <p style="text-align:right;margin:0"><button class="x" data-act="close">閉じる</button></p>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(function(){
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+
+  /* ── データ（仮の強さ・参考概形／公開Eloの傾向を参考にした例示値・差し替え可能） ── */
+  const TEAMS=[
+    {n:"ブラジル",r:2030},{n:"フランス",r:2010},{n:"アルゼンチン",r:2000},{n:"スペイン",r:1980},
+    {n:"イングランド",r:1975},{n:"ポルトガル",r:1960},{n:"オランダ",r:1940},{n:"ドイツ",r:1930},
+    {n:"ベルギー",r:1910},{n:"クロアチア",r:1880},{n:"ウルグアイ",r:1870},{n:"日本",r:1850},
+    {n:"モロッコ",r:1840},{n:"アメリカ",r:1800},{n:"メキシコ",r:1790},{n:"セネガル",r:1780}
+  ];
+  const NT=TEAMS.length;
+  const rating=TEAMS.map(t=>t.r);
+  /* 16チーム シングルイリミの標準シード配置（1位と2位は決勝まで当たらない） */
+  const SEEDSEQ=[1,16,8,9,5,12,4,13,6,11,3,14,7,10,2,15];
+  const sortedIdx=TEAMS.map((_,i)=>i).sort((a,b)=>rating[b]-rating[a]);
+  const bracket=SEEDSEQ.map(s=>sortedIdx[s-1]);
+
+  /* チーム色（黄金角で分散） */
+  function hsl2rgb(h,s,l){ h/=360; const a=s*Math.min(l,1-l); const f=n=>{const k=(n+h*12)%12; return l-a*Math.max(-1,Math.min(k-3,Math.min(9-k,1)));};
+    return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)]; }
+  const COL=TEAMS.map((_,i)=>hsl2rgb((i*222.49)%360,0.62,0.62));
+
+  /* ── 集計 ── */
+  let champ=new Float64Array(NT), reSF=new Float64Array(NT), reQF=new Float64Array(NT), reF=new Float64Array(NT);
+  let nSims=0, scale=420, mode='champ', selected=-1;
+  let playing=true, running=true;
+  const dispW=new Float64Array(NT), dispY=new Float64Array(NT);
+  let inited=false;
+
+  function setScaleFromSlider(v){ // v:0..100  左=混戦(大scale) 右=順当(小scale)
+    scale = 120 + (1 - v/100) * (1500 - 120);
+  }
+  function resetTally(){ champ.fill(0); reSF.fill(0); reQF.fill(0); reF.fill(0); nSims=0; }
+
+  function simulate(){
+    let alive=bracket.slice();
+    while(alive.length>1){
+      const nx=[];
+      for(let i=0;i<alive.length;i+=2){
+        const A=alive[i], B=alive[i+1];
+        const E=1/(1+Math.pow(10,(rating[B]-rating[A])/scale));
+        nx.push(Math.random()<E ? A : B);
+      }
+      alive=nx;
+      if(alive.length===8){ for(const t of alive) reQF[t]++; }
+      else if(alive.length===4){ for(const t of alive) reSF[t]++; }
+      else if(alive.length===2){ for(const t of alive) reF[t]++; }
+      else if(alive.length===1){ champ[alive[0]]++; }
+    }
+    nSims++;
+  }
+
+  /* ── レイアウト ── */
+  let W=0,Hh=0,dpr=1, bx0=0,by0=0,bw=0,bh=0, rowH=0, labelW=120;
+  function geom(){
+    const headEl=root.querySelector('.head');
+    const ctrlEl=root.querySelector('.ctrl');
+    const hb=headEl?(headEl.offsetTop+headEl.offsetHeight):Hh*0.34;
+    const ctrlH=ctrlEl?ctrlEl.offsetHeight:110;
+    const botMargin=Math.max(14,Hh*0.024);
+    const bot=Hh-(ctrlH+botMargin+12);                 // 操作バーの実高さを予約（折返しに追従）
+    const mx=Math.max(18,W*0.035);
+    const wide=W>=900;
+    const left = wide ? Math.max(W*0.38,360) : mx;
+    const top  = wide ? Math.max(118,Hh*0.15) : hb+10;
+    const right = W-mx - (wide? Math.min(220,W*0.16) : 0);  // 広い画面は右の凡例分を空ける
+    bx0=left; by0=top; bw=Math.max(120,right-left); bh=Math.max(60,bot-top);
+    rowH=bh/NT;
+    labelW=Math.min(132, Math.max(82, bw*0.30));
+  }
+
+  function fmt(n){ return n.toLocaleString('en-US'); }
+
+  function draw(){
+    ctx.clearRect(0,0,W,Hh);
+    const probs=new Float64Array(NT);
+    for(let i=0;i<NT;i++){
+      const c = mode==='champ'?champ[i] : reSF[i];
+      probs[i] = nSims>0 ? c/nSims : 0;
+    }
+    const order=Array.from({length:NT},(_,i)=>i).sort((a,b)=> probs[b]-probs[a] || rating[b]-rating[a]);
+    let maxP=0.0001; for(let i=0;i<NT;i++) if(probs[i]>maxP) maxP=probs[i];
+    const barX0=bx0+labelW+8, barMax=bw-labelW-8-46;
+    const rankOf=new Int32Array(NT); order.forEach((idx,rk)=>rankOf[idx]=rk);
+
+    for(let i=0;i<NT;i++){
+      const tY=by0+rankOf[i]*rowH;
+      if(!inited){ dispY[i]=tY; dispW[i]=probs[i]; }
+      else { dispY[i]+=(tY-dispY[i])*0.16; dispW[i]+=(probs[i]-dispW[i])*0.12; }
+    }
+    inited=true;
+
+    ctx.textBaseline='middle';
+    const lead=order[0];
+    for(let i=0;i<NT;i++){
+      const y=dispY[i]+rowH/2, col=COL[i];
+      const isLead=(i===lead && nSims>0), isSel=(i===selected);
+      // 名前
+      ctx.textAlign='right';
+      ctx.fillStyle=isSel?'#fff':(isLead?'rgba(255,255,255,.96)':'rgba(214,224,239,.85)');
+      ctx.font=(isLead||isSel?'600 ':'500 ')+Math.min(13,Math.max(7.5,rowH*0.52))+"px 'M PLUS 1',sans-serif";
+      ctx.fillText(TEAMS[i].n, bx0+labelW, y);
+      // バー背景トラック
+      ctx.fillStyle='rgba(255,255,255,.04)';
+      ctx.fillRect(barX0,y-rowH*0.30,barMax,rowH*0.60);
+      // バー
+      const wlen=Math.max(0,Math.min(1,dispW[i]/(maxP*1.04)))*barMax;
+      const g=ctx.createLinearGradient(barX0,0,barX0+barMax,0);
+      g.addColorStop(0,`rgba(${col[0]},${col[1]},${col[2]},.95)`);
+      g.addColorStop(1,`rgba(${col[0]},${col[1]},${col[2]},.62)`);
+      ctx.fillStyle=g;
+      const bhh=rowH*0.60, byy=y-bhh/2;
+      roundRect(barX0,byy,wlen,bhh,Math.min(5,bhh/2)); ctx.fill();
+      if(isLead){ ctx.save(); ctx.shadowColor=`rgba(${col[0]},${col[1]},${col[2]},.8)`; ctx.shadowBlur=14; ctx.fillStyle=g; roundRect(barX0,byy,wlen,bhh,Math.min(5,bhh/2)); ctx.fill(); ctx.restore(); }
+      if(isSel){ ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.4; roundRect(barX0,byy,Math.max(wlen,2),bhh,Math.min(5,bhh/2)); ctx.stroke(); }
+      // ％
+      ctx.textAlign='left';
+      ctx.fillStyle=isLead?'#fff':`rgba(${col[0]},${col[1]},${col[2]},.95)`;
+      ctx.font="600 "+Math.min(12,Math.max(7.5,rowH*0.50))+"px 'Share Tech Mono',monospace";
+      ctx.fillText((probs[i]*100).toFixed(1)+'%', barX0+wlen+7, y);
+    }
+
+    // stat
+    const ne=root.querySelector('[data-n]'); if(ne) ne.textContent=fmt(nSims);
+    const le=root.querySelector('[data-lead]');
+    if(le){
+      if(selected>=0){
+        const den=nSims||1;
+        le.innerHTML=TEAMS[selected].n+'：ベ8 '+(reQF[selected]/den*100).toFixed(0)+'％ ／ ベ4 '+(reSF[selected]/den*100).toFixed(0)+'％ ／ 決勝 '+(reF[selected]/den*100).toFixed(0)+'％ ／ 優勝 '+(champ[selected]/den*100).toFixed(1)+'％';
+      } else if(nSims>0){
+        const verb = mode==='champ' ? '優勝最有力' : 'ベスト4最有力';
+        le.textContent=verb+'：'+TEAMS[lead].n+' '+(probs[lead]*100).toFixed(1)+'％';
+      } else le.textContent='シミュレーション準備中';
+    }
+  }
+  function roundRect(x,y,w,h,r){ if(w<=0){ctx.beginPath();return;} r=Math.min(r,w/2,h/2); ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  function step(){
+    if(playing){
+      const batch = nSims<3000 ? 220 : 420;
+      for(let i=0;i<batch;i++) simulate();
+    }
+  }
+  function frame(){ if(running){ step(); draw(); } requestAnimationFrame(frame); }
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; Hh=r.height; canvas.width=Math.round(W*dpr); canvas.height=Math.round(Hh*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    geom(); draw();
+  }
+
+  /* ── 操作 ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  function updatePlay(){ playBtn.innerHTML=playing?"\u275A\u275A":"\u25B6"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  const scaleEl=root.querySelector('[data-scale]');
+  setScaleFromSlider(+scaleEl.value);
+  scaleEl.addEventListener("input",()=>{ setScaleFromSlider(+scaleEl.value); resetTally(); });
+  root.querySelector('[data-act="reset"]').addEventListener("click",()=>{ resetTally(); });
+  root.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener("click",()=>{
+    mode=b.getAttribute('data-mode');
+    root.querySelectorAll('[data-mode]').forEach(o=>o.setAttribute('aria-pressed', o===b?'true':'false'));
+    inited=false; draw();
+  }));
+  root.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener("click",()=>{
+    scaleEl.value=b.getAttribute('data-preset'); setScaleFromSlider(+scaleEl.value); resetTally();
+  }));
+  // クリックでチーム選択
+  canvas.addEventListener("click",e=>{
+    const r=canvas.getBoundingClientRect(); const my=(e.clientY-r.top);
+    let hit=-1;
+    for(let i=0;i<NT;i++){ if(my>=dispY[i] && my<dispY[i]+rowH){ hit=i; break; } }
+    selected = (hit===selected)? -1 : hit;
+    draw();
+  });
+  const modal=root.querySelector('[data-modal]');
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion:reduce)").matches){ playing=false; }
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,180); }).observe(root); } else addEventListener("resize",resize);
+
+  resize(); updatePlay(); requestAnimationFrame(frame);
+
+  /* ── 画像保存／録画ツール（ブラウザ内のみ・送信なし・公知のCanvas/MediaRecorder API） ── */
+  (function(){
+    const ctrl=root.querySelector('.ctrl'); if(!ctrl||!canvas) return;
+    const css=getComputedStyle(root);
+    const accent=(css.getPropertyValue('--accent')||'#a78bfa').trim();
+    const bg=(css.getPropertyValue('--bg')||'#07080c').trim();
+    const NAME='forecast';
+    const rows=ctrl.querySelectorAll('.crow'); const bar=rows[rows.length-1]||ctrl;
+    const stamp=()=>{const d=new Date(),pp=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+pp(d.getMonth()+1)+pp(d.getDate())+'_'+pp(d.getHours())+pp(d.getMinutes())+pp(d.getSeconds());};
+    function dl(blob,ext){const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='krworks_'+NAME+'_'+stamp()+'.'+ext;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+    function savePNG(){
+      const w=canvas.width,h=canvas.height,o=document.createElement('canvas');o.width=w;o.height=h;
+      const g=o.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(canvas,0,0);
+      const dp=Math.min(devicePixelRatio||1,2);
+      g.textAlign='right';g.textBaseline='bottom';
+      g.font='700 '+(15*dp)+'px "Share Tech Mono",monospace';g.fillStyle=accent;g.globalAlpha=.92;
+      g.fillText('KR works',w-13*dp,h-28*dp);
+      g.font='600 '+(12*dp)+'px "Share Tech Mono",monospace';g.fillStyle='rgba(255,255,255,.34)';g.globalAlpha=1;
+      g.fillText('krworks.co.jp',w-13*dp,h-11*dp);
+      o.toBlob(b=>{if(b)dl(b,'png');},'image/png');
+    }
+    let rec=null,chunks=[],recBtn=null,timer=0;
+    const canRec=!!(canvas.captureStream&&window.MediaRecorder&&
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')||MediaRecorder.isTypeSupported('video/webm')));
+    function endRec(){recBtn.textContent='\u25CF \u9332\u753B';recBtn.style.color='';recBtn.style.borderColor='';rec=null;clearTimeout(timer);}
+    function toggleRec(){
+      if(rec){if(rec.state==='recording')rec.stop();return;}
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      let st;try{st=canvas.captureStream(30);}catch(e){return;}
+      chunks=[];rec=new MediaRecorder(st,{mimeType:type,videoBitsPerSecond:6000000});
+      rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=()=>{if(chunks.length)dl(new Blob(chunks,{type}),'webm');endRec();};
+      rec.start();recBtn.textContent='\u25A0 \u505C\u6B62';recBtn.style.color=accent;recBtn.style.borderColor=accent;
+      timer=setTimeout(()=>{if(rec&&rec.state==='recording')rec.stop();},5000);
+    }
+    const pngBtn=document.createElement('button');pngBtn.className='chip';pngBtn.type='button';
+    pngBtn.textContent='\u753B\u50CF\u4FDD\u5B58';pngBtn.addEventListener('click',savePNG);bar.appendChild(pngBtn);
+    if(canRec){recBtn=document.createElement('button');recBtn.className='chip';recBtn.type='button';
+      recBtn.textContent='\u25CF \u9332\u753B';recBtn.addEventListener('click',toggleRec);bar.appendChild(recBtn);}
+  })();
+})();
+</script>
+</body>
+</html>
