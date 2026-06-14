@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Gallery | KR works LLC</title>
+<meta name="description" content="KR works LLC のデモ一覧。倉庫AGVの安全走行、Transformer内部の可視化、市場関心度の murmuration。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --bg3:#11141f; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --text:#e0e6ef; --soft:#b6c4d6; --faint:#6b7a90; --bd:rgba(0,240,255,.12);
+    --grid:rgba(0,240,255,.04);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'M PLUS 1',sans-serif;color:var(--text);background:var(--bg);line-height:1.8;-webkit-font-smoothing:antialiased;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:linear-gradient(0deg,transparent 95%,var(--grid) 95%),linear-gradient(90deg,transparent 95%,var(--grid) 95%);background-size:60px 60px;pointer-events:none;z-index:0;}
+
+  /* 統一ナビ＋HOME */
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px;position:relative;z-index:2;}
+
+  header.top{padding:clamp(48px,9vw,96px) 0 clamp(28px,5vw,44px);}
+  .eyebrow{font-family:'Share Tech Mono',monospace;font-size:.78rem;letter-spacing:.3em;text-transform:uppercase;color:var(--cyan);opacity:.85;margin-bottom:1em;}
+  header.top h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.7rem,1.2rem+2.4vw,3rem);letter-spacing:.01em;line-height:1.2;color:#fff;}
+  header.top p{margin-top:18px;max-width:60ch;color:var(--soft);font-size:clamp(.88rem,.84rem+.2vw,1rem);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;padding-bottom:clamp(60px,10vw,110px);}
+
+  .demo{position:relative;display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:12px;background:linear-gradient(180deg,var(--bg2),var(--bg3));overflow:hidden;text-decoration:none;color:inherit;transition:transform .18s,border-color .18s,box-shadow .18s;}
+  .demo::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent,var(--cyan)),transparent);opacity:.7;}
+  .demo:hover{transform:translateY(-4px);border-color:var(--accent,var(--cyan));box-shadow:0 14px 40px -18px var(--accentG,var(--cyanG));}
+
+  /* カードの簡易プレビュー帯（CSSのみ・軽量） */
+  .thumb{height:128px;position:relative;overflow:hidden;background:radial-gradient(120% 120% at 50% 0%,rgba(0,240,255,.10),rgba(7,8,12,0) 60%),#0a0d16;border-bottom:1px solid var(--bd);}
+  .thumb .ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-weight:700;font-size:2.4rem;letter-spacing:.08em;color:var(--accent,var(--cyan));text-shadow:0 0 28px var(--accentG,var(--cyanG));opacity:.92;}
+  .thumb .dots{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:.6;}
+
+  .body{padding:18px 20px 20px;display:flex;flex-direction:column;flex:1;}
+  .cat{font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent,var(--cyan));margin-bottom:8px;}
+  .demo h2{font-size:1.08rem;font-weight:700;color:#fff;margin-bottom:7px;line-height:1.4;}
+  .demo p{font-size:.83rem;color:var(--soft);line-height:1.75;flex:1;}
+  .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .tag{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--soft);border:1px solid var(--bd);border-radius:999px;padding:.3em .7em;}
+  .tag.alt{color:#fbbf24;border-color:rgba(251,191,36,.3);}
+  .go{margin-left:auto;font-family:'Orbitron',sans-serif;font-size:.74rem;letter-spacing:.08em;color:var(--accent,var(--cyan));display:inline-flex;align-items:center;gap:6px;}
+  .demo:hover .go{text-shadow:0 0 14px var(--accentG,var(--cyanG));}
+
+  .note{max-width:60ch;margin:0 auto clamp(48px,8vw,80px);padding:16px 20px;border:1px solid var(--bd);border-radius:10px;background:rgba(0,240,255,.04);color:var(--faint);font-size:.78rem;line-height:1.8;}
+  .note b{color:var(--soft);font-weight:500;}
+
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:8px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">// Demo Gallery</p>
+    <h1>デモ一覧</h1>
+    <p>KR works が公開している可視化・シミュレーションのデモです。安全走行、AIの内部、市場の動き——それぞれ別の世界を、動かして確かめられます。</p>
+  </header>
+
+  <div class="grid">
+
+    <a class="demo" href="agv_demo.html" style="--accent:#00f0ff;--accentG:rgba(0,240,255,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="agv"></canvas><div class="ico">AGV</div></div>
+      <div class="body">
+        <div class="cat">Robotics · Safety</div>
+        <h2>倉庫AGV 安全走行デモ</h2>
+        <p>自律走行する搬送ロボット（AGV）が、互いに衝突せず安全に動く様子をシミュレーション。経路と回避の挙動を可視化します。</p>
+        <div class="meta"><span class="tag">Simulation</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="transformer_inside.html" style="--accent:#818cf8;--accentG:rgba(129,140,248,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="tf"></canvas><div class="ico">GPT-2</div></div>
+      <div class="body">
+        <div class="cat">Interpretability</div>
+        <h2>Transformer内部の可視化</h2>
+        <p>実モデル GPT-2（124M）の隠れ状態・アテンション・logit lens を実抽出。3画面を共通スライダーで同期し、層ごとの「考えの移り変わり」を眺めます。</p>
+        <div class="meta"><span class="tag">Real model</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="finance_demo.html" style="--accent:#5eead4;--accentG:rgba(94,234,212,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="mkt"></canvas><div class="ico">市場</div></div>
+      <div class="body">
+        <div class="cat">Markets · 演出デモ</div>
+        <h2>市場の群れ — murmuration</h2>
+        <p>日経225の銘柄をムクドリの群れに見立て、市場の密集・速さ・向き・分裂へ翻訳。あくまで<b style="color:#fbbf24;font-weight:500">演出的写像</b>で、予測でも保存則監査でもありません。</p>
+        <div class="meta"><span class="tag alt">演出 / 擬似データ</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+  </div>
+
+  <p class="note"><b>「市場の群れ」について：</b>市場の状態を群れの動きへ翻訳した演出であり、株価予測や当社のAI安全性技術（LogicLock）とは無関係です。動作確認用の擬似／記録データで動いています。</p>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+/* カードの軽量プレビュー：accent色の小さなドット群（静止・低負荷） */
+(() => {
+  const accents = { agv:[0,240,255], tf:[129,140,248], mkt:[94,234,212] };
+  const canvases = [...document.querySelectorAll('canvas[data-thumb]')];
+  function paint(c){
+    const host = c.parentElement;                 // .thumb（安定したサイズの親から採寸）
+    const r = host.getBoundingClientRect();
+    if(r.width < 2 || r.height < 2) return;
+    const dpr = Math.min(devicePixelRatio||1, 2);
+    c.width = Math.round(r.width*dpr); c.height = Math.round(r.height*dpr);
+    const g = c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
+    const rgb = accents[c.dataset.thumb] || [0,240,255];
+    const n = c.dataset.thumb==='mkt'?70 : c.dataset.thumb==='tf'?54 : 40;
+    for(let i=0;i<n;i++){
+      let x,y;
+      if(c.dataset.thumb==='tf'){            // 行列っぽい格子
+        x=((i%9)+Math.random()*.4)/9*r.width; y=((i/9|0)+Math.random()*.4)/6*r.height;
+      } else if(c.dataset.thumb==='agv'){     // 経路っぽい横ライン
+        x=Math.random()*r.width; y=(0.3+0.4*Math.random())*r.height;
+      } else {                                // 群れ
+        const a=Math.random()*6.28, rad=Math.random()*r.width*0.28;
+        x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7;
+      }
+      g.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.2+Math.random()*0.6})`;
+      g.beginPath(); g.arc(x,y,1.4,0,6.28); g.fill();
+    }
+  }
+  function paintAll(){ canvases.forEach(paint); }
+  paintAll();
+  let t; addEventListener('resize', () => { clearTimeout(t); t=setTimeout(paintAll, 150); });
+})();
+</script>
+</body>
+</html>
