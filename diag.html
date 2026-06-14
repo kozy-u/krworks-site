@@ -9,10 +9,15 @@
     };
     window.addEventListener('DOMContentLoaded', function(){
       var b = document.createElement('div');
-      b.textContent = '診断ビルド v-diag1';
+      b.textContent = '診断ビルド v-diag2';
       b.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;background:#ff0;color:#000;font:12px/1.4 monospace;padding:4px 8px;border-radius:4px;';
       document.body.appendChild(b);
     });
+    document.addEventListener('click', function(e){
+      var el = document.elementFromPoint(e.clientX, e.clientY);
+      var d = el ? (el.tagName + (el.id ? '#'+el.id : '') + (el.className && typeof el.className==='string' ? '.'+el.className.split(' ').join('.') : '')) : 'null';
+      alert('クリックが届いた要素:\n' + d);
+    }, true);
   </script>
   <!-- ▲ 診断ビルドここまで ▲ -->
 <meta charset="UTF-8">
