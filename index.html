@@ -706,7 +706,7 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
     if (res.ok) {
       result.style.display = 'block';
       result.style.color = '#00f0ff';
-      result.textContent = 'お問い合わせを受け付けました。ありがとうございます。';
+      result.textContent = 'メールを送信しました。お問い合わせありがとうございます。';
       ['name','company','email','message'].forEach(id => document.getElementById(id).value = '');
     } else { throw new Error(); }
   } catch (e) {
