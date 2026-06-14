@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>反応拡散 — 自己組織化する模様 | KR works LLC</title>
+<meta name="description" content="Gray-Scott 反応拡散系が自己組織化して模様を生むアートデモ。チューリング・パターンの公知モデルで、ブラウザ内のみで動作し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#4ade80; --accentG:rgba(74,222,128,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(74,222,128,.07) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 60%,#0c0f1a 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:crosshair;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:52ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(74,222,128,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(94%,880px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(74,222,128,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(74,222,128,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .scrub{width:120px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(74,222,128,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  #stage .chip{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.42em .8em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover{color:#fff;border-color:var(--accent);background:rgba(74,222,128,.1);}
+  #stage .chip[aria-current="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+  #stage .feedtag{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .feedtag b{color:var(--accent);font-weight:400;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(74,222,128,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(74,222,128,.22);}
+  /* 支配方程式パネル */
+  #stage .formula{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,190px);z-index:5;max-width:min(48ch,54vw);
+    border:1px solid var(--bd);border-radius:12px;background:rgba(9,12,20,.66);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    padding:11px 14px;pointer-events:none;}
+  #stage .formula .ft{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);opacity:.85;margin-bottom:8px;}
+  #stage .formula .eq{font-family:'Share Tech Mono',monospace;font-size:.84rem;line-height:1.85;color:var(--ink);white-space:nowrap;}
+  #stage .formula .eq .op{color:var(--accent);padding:0 .12em;}
+  #stage .formula .pr{margin-top:8px;padding-top:7px;border-top:1px solid var(--bd);font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .formula .pr b{color:var(--accent);font-weight:400;}
+  #stage .formula sub{font-size:.7em;}
+  @media(max-width:760px){#stage .formula{display:none;}}
+
+  #stage .card .eqbox{font-family:'Share Tech Mono',monospace;font-size:.82rem;line-height:2;color:var(--ink);background:rgba(74,222,128,.05);border:1px solid var(--bd);border-radius:8px;padding:11px 13px;margin-bottom:12px;}
+  #stage .card .eqbox .op{color:var(--accent);}
+  #stage .card .eqbox sub{font-size:.72em;}
+
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="Gray-Scott 反応拡散系が模様を自己組織化するアートデモ。ドラッグで種をまけます。"></canvas>
+
+  <header class="head">
+    <p class="ey">Reaction-Diffusion ／ 創発</p>
+    <h1>2つの物質だけで、模様が生まれる</h1>
+    <p class="sub">「供給」と「除去」が拮抗する<b>Gray-Scott 反応拡散系</b>。たった2つの化学種が広がり合うだけで、サンゴ・迷路・斑点といった模様が<b>ひとりでに</b>育ちます。画面を<b>ドラッグ</b>すると種をまけます。</p>
+    <span class="honest"><i class="dot"></i>アートデモ ・ 公知モデル(Gray-Scott/チューリング・パターン) ・ 予測ではありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">Pattern</div>
+    <div class="pv" data-stat>サンゴ</div>
+  </div>
+
+  <div class="formula" aria-label="支配方程式">
+    <div class="ft">支配方程式 ・ Gray-Scott</div>
+    <div class="eq">∂U/∂t = D<sub>u</sub>∇²U <span class="op">−</span> UV² <span class="op">+</span> f(1−U)</div>
+    <div class="eq">∂V/∂t = D<sub>v</sub>∇²V <span class="op">+</span> UV² <span class="op">−</span> (f+k)V</div>
+    <div class="pr">f = <b data-pf>0.0545</b>　k = <b data-pk>0.0620</b>　D<sub>u</sub> = 0.16　D<sub>v</sub> = 0.08</div>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">❚❚</button>
+      <div class="chips" role="group" aria-label="模様プリセット">
+        <button class="chip" data-pre="coral" aria-current="true">サンゴ</button>
+        <button class="chip" data-pre="mitosis">細胞分裂</button>
+        <button class="chip" data-pre="maze">迷路</button>
+        <button class="chip" data-pre="waves">波</button>
+        <button class="chip" data-pre="spots">斑点</button>
+      </div>
+    </div>
+    <div class="crow">
+      <span class="slab">速度</span>
+      <input class="scrub" type="range" min="2" max="18" value="8" data-speed aria-label="シミュレーション速度">
+      <span class="spacer"></span>
+      <span class="feedtag">DRAG: <b>種をまく</b></span>
+      <button class="chip" data-act="reseed">種まきし直す</button>
+      <button class="chip" data-act="clear">消去</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知モデルのアートデモ」です</h2>
+      <p><b>反応拡散系</b>は、アラン・チューリングが1952年に提唱した「模様がひとりでにできる」仕組みの数理モデルです。本デモはその一種 <b>Gray-Scott モデル</b>を可視化した<b>アート・教育目的</b>のもので、当社の LogicLock／保存則監査や、何かの予測とは<b>無関係</b>です。</p>
+      <p>模様のもとになっているのは、たった2本の式です（∇²＝まわりとの差・ラプラシアン）：</p>
+      <div class="eqbox">
+        ∂U/∂t = D<sub>u</sub>∇²U <span class="op">−</span> UV² <span class="op">+</span> f(1−U)<br>
+        ∂V/∂t = D<sub>v</sub>∇²V <span class="op">+</span> UV² <span class="op">−</span> (f+k)V
+      </div>
+      <ul>
+        <li>2つの化学種 <b>U</b>・<b>V</b> が拡散しながら反応 <b>U + 2V → 3V</b> を起こす</li>
+        <li><b>供給 f</b>（Uを足す）と <b>除去 k</b>（Vを抜く）のバランスで模様が決まる</li>
+        <li>プリセットは (f, k) の組を切り替えているだけ</li>
+        <li>同じ規則でも初期の種のまき方で結果が変わる＝<b>創発</b></li>
+        <li>murmuration デモと同じく「単純な局所ルールから複雑な全体」の系譜</li>
+      </ul>
+      <p>すべてブラウザ内のリアルタイム計算です。外部通信も学習済みモデルもありません。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+
+  let W=0,H=0,dpr=1;
+  let GW=0,GH=0, U,V,U2,V2, img, off=document.createElement("canvas"), octx=off.getContext("2d");
+  const Du=0.16, Dv=0.08, dt=1.0;
+  const PRE={
+    coral:  {f:0.0545,k:0.0620, name:"サンゴ"},
+    mitosis:{f:0.0367,k:0.0649, name:"細胞分裂"},
+    maze:   {f:0.0290,k:0.0570, name:"迷路"},
+    waves:  {f:0.0140,k:0.0450, name:"波"},
+    spots:  {f:0.0250,k:0.0600, name:"斑点"},
+  };
+  let f=PRE.coral.f, k=PRE.coral.k, preName="サンゴ";
+  let palette=new Uint8Array(256*3);
+
+  function buildPalette(){
+    // dark → accent green → pale mint
+    const stops=[[7,12,10],[16,80,48],[74,222,128],[200,255,225]];
+    for(let i=0;i<256;i++){
+      const t=i/255, seg=t*(stops.length-1), si=Math.min(stops.length-2,Math.floor(seg)), ft=seg-si;
+      const a=stops[si], b=stops[si+1];
+      palette[i*3  ]=a[0]+(b[0]-a[0])*ft;
+      palette[i*3+1]=a[1]+(b[1]-a[1])*ft;
+      palette[i*3+2]=a[2]+(b[2]-a[2])*ft;
+    }
+  }
+
+  function alloc(){
+    const n=GW*GH;
+    U=new Float32Array(n); V=new Float32Array(n); U2=new Float32Array(n); V2=new Float32Array(n);
+    off.width=GW; off.height=GH; img=octx.createImageData(GW,GH);
+  }
+  function clearField(){ U.fill(1); V.fill(0); }
+  function seedAt(cx,cy,r,amt){
+    for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++){
+      if(x*x+y*y>r*r) continue;
+      const gx=((cx+x)%GW+GW)%GW, gy=((cy+y)%GH+GH)%GH, idx=gy*GW+gx;
+      V[idx]=Math.min(1,(V[idx]||0)+amt); U[idx]=Math.max(0,1-V[idx]);
+    }
+  }
+  function reseed(){
+    clearField();
+    const blobs=6+(Math.random()*5|0);
+    for(let i=0;i<blobs;i++) seedAt((Math.random()*GW)|0,(Math.random()*GH)|0, 3+(Math.random()*4|0), 0.9);
+  }
+
+  function stepSim(){
+    for(let y=0;y<GH;y++){
+      const ym=(y-1+GH)%GH, yp=(y+1)%GH;
+      for(let x=0;x<GW;x++){
+        const xm=(x-1+GW)%GW, xp=(x+1)%GW, i=y*GW+x;
+        const u=U[i], v=V[i];
+        // ラプラシアン（5点 + 対角、重み付き）
+        const lapU=(U[y*GW+xm]+U[y*GW+xp]+U[ym*GW+x]+U[yp*GW+x])*0.2
+                  +(U[ym*GW+xm]+U[ym*GW+xp]+U[yp*GW+xm]+U[yp*GW+xp])*0.05 - u;
+        const lapV=(V[y*GW+xm]+V[y*GW+xp]+V[ym*GW+x]+V[yp*GW+x])*0.2
+                  +(V[ym*GW+xm]+V[ym*GW+xp]+V[yp*GW+xm]+V[yp*GW+xp])*0.05 - v;
+        const uvv=u*v*v;
+        let nu=u+(Du*lapU - uvv + f*(1-u))*dt;
+        let nv=v+(Dv*lapV + uvv - (f+k)*v)*dt;
+        U2[i]=nu<0?0:nu>1?1:nu; V2[i]=nv<0?0:nv>1?1:nv;
+      }
+    }
+    let t=U; U=U2; U2=t; t=V; V=V2; V2=t;
+  }
+
+  function render(){
+    const pd=img.data;
+    for(let i=0;i<GW*GH;i++){
+      let c=Math.floor(V[i]*5.0*255); if(c>255)c=255; if(c<0)c=0;
+      const p=c*3, j=i*4;
+      pd[j]=palette[p]; pd[j+1]=palette[p+1]; pd[j+2]=palette[p+2]; pd[j+3]=255;
+    }
+    octx.putImageData(img,0,0);
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(off,0,0,GW,GH,0,0,W,H);
+  }
+
+  let playing=true, running=true, speed=8;
+  function frame(){
+    if(running){
+      if(playing){ for(let s=0;s<speed;s++) stepSim(); }
+      render();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── 種まき（ドラッグ） ── */
+  let painting=false;
+  function paintAt(ev){
+    const r=canvas.getBoundingClientRect();
+    const gx=Math.floor((ev.clientX-r.left)/W*GW), gy=Math.floor((ev.clientY-r.top)/H*GH);
+    if(gx>=0&&gy>=0&&gx<GW&&gy<GH) seedAt(gx,gy,Math.max(2,GW*0.02|0),0.9);
+  }
+  canvas.addEventListener("pointerdown",e=>{ canvas.setPointerCapture(e.pointerId); painting=true; paintAt(e); });
+  canvas.addEventListener("pointermove",e=>{ if(painting) paintAt(e); });
+  canvas.addEventListener("pointerup",()=>painting=false);
+  canvas.addEventListener("pointercancel",()=>painting=false);
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const speedR=root.querySelector('[data-speed]');
+  const statEl=root.querySelector('[data-stat]');
+  const pfEl=root.querySelector('[data-pf]'), pkEl=root.querySelector('[data-pk]');
+  function setParamDisp(fv,kv){ pfEl.textContent=fv.toFixed(4); pkEl.textContent=kv.toFixed(4); }
+  const preChips=[...root.querySelectorAll('[data-pre]')];
+  const modal=root.querySelector('[data-modal]');
+  function updatePlay(){ playBtn.textContent=playing?"❚❚":"►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  speedR.addEventListener("input",()=>speed=+speedR.value);
+  preChips.forEach(b=>b.addEventListener("click",()=>{
+    const p=PRE[b.dataset.pre]; f=p.f; k=p.k; preName=p.name; statEl.textContent=preName;
+    setParamDisp(f,k);
+    preChips.forEach(o=>o.setAttribute("aria-current",String(o===b)));
+    reseed(); playing=true; updatePlay();
+  }));
+  root.querySelector('[data-act="reseed"]').addEventListener("click",()=>{ reseed(); playing=true; updatePlay(); });
+  root.querySelector('[data-act="clear"]').addEventListener("click",()=>{ clearField(); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height;
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    // グリッドは負荷を抑えて固定上限
+    const target=Math.min(220, Math.round(W/4));
+    GW=Math.max(80,target); GH=Math.max(60,Math.round(GW*H/W));
+    alloc(); reseed();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,200); }).observe(root); }
+  else addEventListener("resize",resize);
+
+  buildPalette(); setParamDisp(f,k); resize(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

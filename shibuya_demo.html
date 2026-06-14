@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>渋谷スクランブル — 群れる横断 | KR works LLC</title>
+<meta name="description" content="スクランブル交差点を行き交う歩行者を、ソーシャルフォース＋群れ(boids)で鳥の群れのように可視化した教育・演出デモ。公知モデルのみで動作し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#e879f9; --accentG:rgba(232,121,249,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(232,121,249,.07) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#07080e 0%,#090b14 60%,#0b0e18 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:52ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(232,121,249,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);margin-top:4px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,196px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;max-width:62ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:50%;flex:none;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(95%,940px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(232,121,249,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(232,121,249,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .field{display:flex;align-items:center;gap:8px;}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{width:108px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(232,121,249,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(232,121,249,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(232,121,249,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(232,121,249,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="スクランブル交差点を行き交う歩行者を、群れのように可視化した教育・演出デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Scramble Crossing ／ 群れる横断</p>
+    <h1>交差点が、群れの川になる</h1>
+    <p class="sub">4つの角の歩行者を<b>一羽の鳥</b>に見立て、「行き先へ向かう力・人を避ける力・<b>同じ向きと揃う力</b>」で動かします。信号が歩行者青になると、対角を含めて一斉に横断し、色の違うストリームが<b>交差して編み込まれます</b>。</p>
+    <span class="honest"><i class="dot"></i>教育・演出デモ ・ 公知モデル(social force + boids) ・ 予測でも交通設計でもありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">Signal</div>
+    <div class="pv" data-stat>歩行者 青</div>
+    <div class="pv2" data-stat2>横断中 0 ・ 完了 0</div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i style="background:#38bdf8"></i>北西発</span>
+    <span><i style="background:#c084fc"></i>北東発</span>
+    <span><i style="background:#5eead4"></i>南西発</span>
+    <span><i style="background:#fb923c"></i>南東発</span>
+    <span><i style="background:#22c55e"></i>歩行者青</span>
+    <span><i style="background:#ef4444"></i>車青(待機)</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="シミュレーション操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">❚❚</button>
+      <div class="field"><span class="slab">人数 <b data-vn>150</b></span><input class="scrub" type="range" min="40" max="260" value="150" data-num></div>
+      <div class="field"><span class="slab">歩行者青 <b data-vg>7s</b></span><input class="scrub" type="range" min="3" max="14" value="7" data-green></div>
+      <div class="field"><span class="slab">揃いやすさ <b data-va>0.6</b></span><input class="scrub" type="range" min="0" max="100" value="60" data-align></div>
+    </div>
+    <div class="crow">
+      <button class="chip" data-act="restart">リスタート</button>
+      <span class="spacer"></span>
+      <button class="tog" data-act="real" aria-pressed="false">リアル寄り</button>
+      <button class="tog" data-act="trail" aria-pressed="true">残像</button>
+      <button class="tog" data-act="link" aria-pressed="false">群れの線</button>
+      <button class="tog" data-act="diag" aria-pressed="true">対角横断</button>
+      <button class="tog" data-act="cars" aria-pressed="true">車</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知モデルの教育・演出デモ」です</h2>
+      <p>渋谷のスクランブル交差点を題材に、歩行者の流れを<b>ソーシャルフォース・モデル</b>（Helbing &amp; Molnár, 1995）と<b>群れモデル(boids)</b>（Reynolds, 1987）で表現した<b>演出</b>です。実際の人流データの再現でも、交通・避難設計の根拠でもなく、当社の LogicLock／保存則監査や予測とも<b>無関係</b>です。</p>
+      <p>一人ひとりにはたらく力は3つだけ：</p>
+      <ul>
+        <li><b>駆動力</b>：自分の行き先（対角を含む別の角）へ向かう</li>
+        <li><b>分離</b>：近づきすぎた相手を避ける（だから中央で編み込まれる）</li>
+        <li><b>整列・結合</b>：同じ出発地の人どうしで向きを揃え、群れになる ← 鳥の群れらしさ</li>
+      </ul>
+      <p><b>「リアル寄り」</b>をオンにすると、出発地で群れる演出をやめ、<b>進行方向の近い人どうしで自然にレーンができる</b>挙動（実際のスクランブルで起きる現象）に切り替わり、相手の未来位置を避ける<b>先読み回避</b>も働きます。揃いやすさを下げるほど、より素の歩行者に近づきます。</p>
+      <p>信号は「歩行者青（全方向が一斉横断）」と「車青（歩行者は角で待機）」を繰り返します。色は<b>出発した角</b>を表し、揃いやすさを上げるほど流れが鳥の群れのように束ねられます。</p>
+      <p>すべてブラウザ内のリアルタイム計算です。外部通信も学習済みモデルもありません。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let W=0,H=0,dpr=1;
+  // 交差点ジオメトリ
+  let box={x0:0,y0:0,x1:0,y1:0}, corners=[], box2;
+  const COL=[ [56,189,248],[192,132,252],[94,234,212],[251,146,60] ]; // NW,NE,SW,SE
+  let glow=[];
+
+  // パラメータ
+  let Nmax=150, tGreen=7, tVeh=6, alignK=0.6;
+  let trailOn=true, linkOn=false, diagOn=true, carsOn=true, realMode=false;
+
+  // 状態
+  let agents=[], phase="walk", tPhase=0, crossed=0;
+  let cars=[];
+
+  function makeGlow(rgb){
+    const s=26, c=document.createElement("canvas"); c.width=c.height=s; const g=c.getContext("2d");
+    const gr=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+    gr.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.95)`);
+    gr.addColorStop(0.42,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.32)`);
+    gr.addColorStop(1,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    g.fillStyle=gr; g.fillRect(0,0,s,s); return c;
+  }
+
+  function setGeom(){
+    const bw=Math.min(W,H)*0.40;
+    const cx=W/2, cy=H/2;
+    box={ x0:cx-bw/2, y0:cy-bw/2, x1:cx+bw/2, y1:cy+bw/2 };
+    const gd=Math.max(40, bw*0.34);
+    corners=[
+      {x:box.x0-gd, y:box.y0-gd}, // 0 NW
+      {x:box.x1+gd, y:box.y0-gd}, // 1 NE
+      {x:box.x0-gd, y:box.y1+gd}, // 2 SW
+      {x:box.x1+gd, y:box.y1+gd}, // 3 SE
+    ];
+    // 画面内にクランプ
+    const m=24;
+    for(const c of corners){ c.x=Math.max(m,Math.min(W-m,c.x)); c.y=Math.max(m,Math.min(H-m,c.y)); }
+    glow=COL.map(makeGlow);
+  }
+
+  function spawnWaiting(originSpec){
+    const oc = originSpec!=null ? originSpec : (Math.random()*4|0);
+    const c=corners[oc], z=Math.max(30,Math.min(W,H)*0.10);
+    agents.push({
+      x:c.x+(Math.random()-.5)*z, y:c.y+(Math.random()-.5)*z,
+      vx:0, vy:0, o:oc, dest:-1, gx:c.x, gy:c.y, state:"wait",
+      hist:[]
+    });
+  }
+  function destFor(o){
+    // 対角優先・隣も可。対角OFFなら隣のみ
+    const opp=[3,2,1,0][o], adj=[[1,2],[0,3],[0,3],[1,2]][o];
+    if(diagOn && Math.random()<0.55) return opp;
+    return adj[Math.random()<0.5?0:1];
+  }
+  function release(){
+    for(const a of agents){
+      if(a.state==="wait"){ a.dest=destFor(a.o); const c=corners[a.dest]; a.gx=c.x; a.gy=c.y; a.state="cross"; }
+    }
+  }
+  function restart(){
+    agents=[]; crossed=0; phase="walk"; tPhase=0;
+    // 初期は各角に待機者
+    for(let i=0;i<Nmax;i++) spawnWaiting();
+    release();
+    initCars();
+  }
+
+  /* ── 信号 ── */
+  function phaseDur(){ return phase==="walk"?tGreen:tVeh; }
+  function tickSignal(dt){
+    tPhase+=dt;
+    if(tPhase>=phaseDur()){
+      tPhase=0;
+      if(phase==="walk"){ phase="veh"; }
+      else { phase="walk"; release(); }
+    }
+  }
+
+  /* ── 群衆ステップ（social force + boids alignment/cohesion） ── */
+  const R=5, SEP_A=20, SEP_B=8, SEP_R=26, ALN_R=40, TAU=0.42, VMAX=2.7;
+  const LOOK=8, ANT_A=16;   // 先読みフレーム数・先読み回避の強さ（リアル寄りモード）
+  function step(dt){
+    const vdes=1.7;
+    for(const a of agents){
+      let fx=0,fy=0;
+      if(a.state==="wait"){
+        // 角でたむろ（ゴール＝自分の角＋微小ジッタ）
+        const c=corners[a.o]; let dx=c.x-a.x, dy=c.y-a.y; const dl=Math.hypot(dx,dy)||1;
+        fx=(dx/dl* (dl>14?0.9:0))*3 - a.vx*2.2; fy=(dy/dl*(dl>14?0.9:0))*3 - a.vy*2.2;
+        fx+=(Math.random()-.5)*0.6; fy+=(Math.random()-.5)*0.6;
+      } else {
+        let dx=a.gx-a.x, dy=a.gy-a.y; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
+        fx=(vdes*dx-a.vx)/TAU; fy=(vdes*dy-a.vy)/TAU;
+      }
+      // 近傍（分離＋整列/結合）
+      let ax=0,ay=0,cxx=0,cyy=0,an=0;
+      const aspd=Math.hypot(a.vx,a.vy)||1e-6;
+      for(const b of agents){
+        if(b===a) continue;
+        let rx=a.x-b.x, ry=a.y-b.y; let d=Math.hypot(rx,ry);
+        if(d<1e-3){ rx=Math.random()-.5; ry=Math.random()-.5; d=Math.hypot(rx,ry)||1; }
+        if(d<SEP_R){ const f=SEP_A*Math.exp((2*R-d)/SEP_B)/d; fx+=f*rx; fy+=f*ry; }
+        if(realMode){
+          // 先読み回避：相手の未来位置（相対速度×LOOK）を避ける＝自然な譲り合い
+          const px=rx+(a.vx-b.vx)*LOOK, py=ry+(a.vy-b.vy)*LOOK, pd=Math.hypot(px,py)||1;
+          if(pd<SEP_R*1.3){ const f=ANT_A*Math.exp((2*R-pd)/SEP_B)/pd; fx+=f*px; fy+=f*py; }
+          // 方向が近い人と整列＝レーンが自然発生（出発角は無関係）
+          if(a.state==="cross" && b.state==="cross" && d<ALN_R){
+            const bspd=Math.hypot(b.vx,b.vy);
+            if(bspd>0.05 && (a.vx*b.vx+a.vy*b.vy)/(aspd*bspd)>0.5){ ax+=b.vx; ay+=b.vy; an++; }
+          }
+        } else {
+          // 演出：同じ出発角どうしで群れる（整列＋結合）
+          if(a.state==="cross" && b.state==="cross" && b.o===a.o && d<ALN_R){
+            ax+=b.vx; ay+=b.vy; cxx+=b.x; cyy+=b.y; an++;
+          }
+        }
+      }
+      if(an>0 && a.state==="cross"){
+        ax/=an; ay/=an;
+        if(realMode){
+          fx+=(ax-a.vx)*alignK*0.6; fy+=(ay-a.vy)*alignK*0.6;       // 方向整列のみ（弱め）
+        } else {
+          cxx/=an; cyy/=an;
+          fx+=(ax-a.vx)*alignK*0.9; fy+=(ay-a.vy)*alignK*0.9;       // alignment
+          fx+=(cxx-a.x)*alignK*0.012; fy+=(cyy-a.y)*alignK*0.012;   // cohesion
+        }
+      }
+      a.vx+=fx*dt; a.vy+=fy*dt;
+      const sp=Math.hypot(a.vx,a.vy);
+      if(sp>VMAX){ a.vx=a.vx/sp*VMAX; a.vy=a.vy/sp*VMAX; }
+      a.x+=a.vx*dt*60; a.y+=a.vy*dt*60;
+      // 到着判定
+      if(a.state==="cross"){ const dd=Math.hypot(a.x-a.gx,a.y-a.gy); if(dd<Math.max(28,Math.min(W,H)*0.08)){ a.state="done"; } }
+    }
+    // 退場と補充
+    if(agents.length){
+      let alive=[];
+      for(const a of agents){ if(a.state==="done"){ crossed++; } else alive.push(a); }
+      agents=alive;
+    }
+    // 待機者を補充（車青で貯める）
+    const wantSpawn = phase==="veh" ? 0.5 : 0.12;
+    if(agents.length<Nmax && Math.random()<wantSpawn){
+      const k=Math.min(Nmax-agents.length, phase==="veh"?2:1);
+      for(let i=0;i<k;i++) spawnWaiting();
+    }
+  }
+
+  /* ── 車（演出）：青信号で走行。歩行者青では交差点手前の停止線で待機し、
+        交差点内の車は通り抜けて空にする。停止線では車間をとって並ぶ ── */
+  function carLen(){ return Math.max(16, Math.min(W,H)*0.05); }
+  function initCars(){
+    cars=[];
+    const laneOff=Math.min(W,H)*0.40*0.20;
+    const cyc=(box.y0+box.y1)/2, cxc=(box.x0+box.x1)/2;
+    const lanes=[
+      {axis:"h", dir: 1, off:cyc-laneOff},
+      {axis:"h", dir:-1, off:cyc+laneOff},
+      {axis:"v", dir: 1, off:cxc+laneOff},
+      {axis:"v", dir:-1, off:cxc-laneOff},
+    ];
+    for(const ln of lanes){
+      const span=ln.axis==="h"?W:H, count=3, gap=span/count;
+      for(let i=0;i<count;i++) cars.push({axis:ln.axis, dir:ln.dir, off:ln.off, p:i*gap+Math.random()*gap*0.3});
+    }
+  }
+  function stepCars(dt){
+    const sp=1.7*dt*60, L=carLen(), minGap=L*1.4;
+    const lanes={};
+    for(const c of cars){ const key=c.axis+"_"+c.dir+"_"+Math.round(c.off); (lanes[key]||(lanes[key]=[])).push(c); }
+    for(const key in lanes){
+      const arr=lanes[key], dir=arr[0].dir, axis=arr[0].axis;
+      const span=axis==="h"?W:H;
+      const start=axis==="h"?box.x0:box.y0, end=axis==="h"?box.x1:box.y1;
+      const stopC = dir>0 ? start - L/2 : end + L/2;     // 停止線での車体中心位置
+      arr.sort((a,b)=> dir>0 ? b.p-a.p : a.p-b.p);       // 進行方向で最前の車から処理
+      let leader=null;
+      for(const c of arr){
+        let np=c.p+dir*sp;
+        // 歩行者青：停止線より手前の車だけ止める。交差点内/通過済みはそのまま抜ける
+        if(phase==="walk"){
+          if(dir>0){ if(c.p<=stopC) np=Math.min(np,stopC); }
+          else     { if(c.p>=stopC) np=Math.max(np,stopC); }
+        }
+        // 車間：前走車を追い越さない（停止線で数珠つなぎになる）
+        if(leader!==null){ np = dir>0 ? Math.min(np, leader-minGap) : Math.max(np, leader+minGap); }
+        c.p=np; leader=c.p;
+      }
+      // 画面外に出た車を反対側へ再投入（追従計算の後にまとめて）
+      for(const c of arr){ if(c.p>span+L) c.p=-L; else if(c.p<-L) c.p=span+L; }
+    }
+  }
+  function drawCars(){
+    if(!carsOn) return;
+    const L=carLen(), Wd=L*0.5;
+    for(const c of cars){
+      let x,y,ww,hh;
+      if(c.axis==="h"){ x=c.p; y=c.off; ww=L; hh=Wd; }
+      else { x=c.off; y=c.p; ww=Wd; hh=L; }
+      ctx.save();
+      ctx.fillStyle="rgba(150,170,200,.32)"; ctx.strokeStyle="rgba(200,220,245,.4)"; ctx.lineWidth=1;
+      rr(x-ww/2,y-hh/2,ww,hh,3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="rgba(255,240,200,.55)";
+      const hx = c.axis==="h" ? x+(c.dir>0?ww/2-2:-ww/2+2) : x;
+      const hy = c.axis==="v" ? y+(c.dir>0?hh/2-2:-hh/2+2) : y;
+      ctx.beginPath(); ctx.arc(hx,hy,1.6,0,6.28); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  /* ── 地面（道路・横断ガイド・信号）：四角い交差点ボックスは描かない ── */
+  function drawGround(){
+    const {x0,y0,x1,y1}=box;
+    // 道路帯（縦横を同色で塗り、十字＝プラス字に。中央に独立した正方形は作らない）
+    ctx.fillStyle="#0b0e17";
+    ctx.fillRect(0,y0,W,y1-y0);          // 横道路
+    ctx.fillRect(x0,0,x1-x0,H);          // 縦道路
+    const green = phase==="walk";
+    // 横断ガイドは対角のみ控えめに（スクランブルらしさの示唆。四角い枠は描かない）
+    if(diagOn){
+      ctx.save(); ctx.setLineDash([9,9]); ctx.lineWidth=3;
+      ctx.strokeStyle = green ? "rgba(125,247,170,.16)" : "rgba(176,190,210,.07)";
+      line(x0,y0,x1,y1); line(x1,y0,x0,y1);
+      ctx.restore();
+    }
+    // 信号（4隅近く）
+    const sigCol = green ? "#22c55e" : "#ef4444";
+    const sg=(sx,sy)=>{ ctx.beginPath(); ctx.fillStyle=sigCol; ctx.shadowColor=sigCol; ctx.shadowBlur=10; ctx.arc(sx,sy,4,0,6.28); ctx.fill(); ctx.shadowBlur=0; };
+    sg(x0-12,y0-12); sg(x1+12,y0-12); sg(x0-12,y1+12); sg(x1+12,y1+12);
+  }
+  function line(a,b,c,d){ ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(c,d); ctx.stroke(); }
+
+  /* ── 描画 ── */
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    drawGround();
+    drawCars();
+    // 群れの線（同色・近接）
+    if(linkOn){
+      ctx.lineWidth=1;
+      for(let i=0;i<agents.length;i+=2){
+        const a=agents[i]; if(a.state!=="cross") continue;
+        for(let j=i+2;j<agents.length;j+=2){
+          const b=agents[j]; if(b.state!=="cross"||b.o!==a.o) continue;
+          const dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy;
+          if(d2<1600){ const c=COL[a.o], t=1-Math.sqrt(d2)/40;
+            ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${0.14*t})`;
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+        }
+      }
+    }
+    // トレイル（加算）
+    ctx.globalCompositeOperation="lighter";
+    if(trailOn && !reduce){
+      for(const a of agents){
+        if(a.hist.length>1){
+          const c=COL[a.o];
+          for(let h=1;h<a.hist.length;h++){
+            const p=a.hist[h-1], q=a.hist[h], al=0.05+0.10*(h/a.hist.length);
+            ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${al})`; ctx.lineWidth=2;
+            ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke();
+          }
+        }
+      }
+    }
+    // グロー
+    for(const a of agents){
+      const g=glow[a.o], sc=(a.state==="wait")?0.7:1.0, r=g.width/2*sc;
+      ctx.drawImage(g, a.x-r, a.y-r, g.width*sc, g.height*sc);
+    }
+    ctx.globalCompositeOperation="source-over";
+    // コア
+    for(const a of agents){
+      ctx.beginPath(); ctx.fillStyle=a.state==="wait"?"rgba(255,255,255,.7)":"#ffffff";
+      ctx.arc(a.x,a.y, a.state==="wait"?1.4:1.9, 0,6.28); ctx.fill();
+    }
+  }
+
+  /* ── ループ ── */
+  let playing=true, running=true, hc=0;
+  function frame(){
+    if(running){
+      if(playing){
+        for(let s=0;s<2;s++) step(0.5/60);
+        stepCars(1/60);
+        tickSignal(1/60);
+        hc++;
+        if(hc%2===0){ for(const a of agents){ a.hist.push({x:a.x,y:a.y}); if(a.hist.length>7) a.hist.shift(); } }
+      }
+      draw();
+      const crossing=agents.reduce((s,a)=>s+(a.state==="cross"?1:0),0);
+      statEl.textContent = phase==="walk" ? "歩行者 青" : "車 青（待機）";
+      stat2El.textContent = "横断中 "+crossing+" ・ 完了 "+crossed;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const numR=root.querySelector('[data-num]'), greenR=root.querySelector('[data-green]'), alignR=root.querySelector('[data-align]');
+  const vn=root.querySelector('[data-vn]'), vg=root.querySelector('[data-vg]'), va=root.querySelector('[data-va]');
+  const statEl=root.querySelector('[data-stat]'), stat2El=root.querySelector('[data-stat2]');
+  const trailBtn=root.querySelector('[data-act="trail"]'), linkBtn=root.querySelector('[data-act="link"]');
+  const diagBtn=root.querySelector('[data-act="diag"]'), carsBtn=root.querySelector('[data-act="cars"]');
+  const realBtn=root.querySelector('[data-act="real"]');
+  const modal=root.querySelector('[data-modal]');
+  function updatePlay(){ playBtn.textContent=playing?"❚❚":"►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  numR.addEventListener("input",()=>{ Nmax=+numR.value; vn.textContent=Nmax; });
+  numR.addEventListener("change",()=>restart());
+  greenR.addEventListener("input",()=>{ tGreen=+greenR.value; vg.textContent=tGreen+"s"; });
+  alignR.addEventListener("input",()=>{ alignK=+alignR.value/100; va.textContent=alignK.toFixed(1); });
+  root.querySelector('[data-act="restart"]').addEventListener("click",()=>{ restart(); playing=true; updatePlay(); });
+  trailBtn.addEventListener("click",()=>{ trailOn=!trailOn; trailBtn.setAttribute("aria-pressed",String(trailOn)); });
+  linkBtn.addEventListener("click",()=>{ linkOn=!linkOn; linkBtn.setAttribute("aria-pressed",String(linkOn)); });
+  diagBtn.addEventListener("click",()=>{ diagOn=!diagOn; diagBtn.setAttribute("aria-pressed",String(diagOn)); });
+  carsBtn.addEventListener("click",()=>{ carsOn=!carsOn; carsBtn.setAttribute("aria-pressed",String(carsOn)); });
+  realBtn.addEventListener("click",()=>{ realMode=!realMode; realBtn.setAttribute("aria-pressed",String(realMode));
+    linkOn=false; linkBtn.setAttribute("aria-pressed","false"); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height;
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    setGeom(); restart();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,180); }).observe(root); }
+  else addEventListener("resize",resize);
+
+  resize(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

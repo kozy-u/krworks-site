@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群衆避難 — social force モデル | KR works LLC</title>
+<meta name="description" content="ソーシャルフォース・モデルで群衆が出口へ流れる様子を可視化した教育デモ。出口幅や人数で流れが激変します。公知アルゴリズムのみで動作し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#fb923c; --accentG:rgba(251,146,60,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(251,146,60,.07) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 60%,#0c0f1a 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:52ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(251,146,60,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);margin-top:4px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,196px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;max-width:62ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:50%;flex:none;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(94%,900px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(251,146,60,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(251,146,60,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .field{display:flex;align-items:center;gap:8px;}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{width:118px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(251,146,60,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(251,146,60,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(251,146,60,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(251,146,60,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="ソーシャルフォース・モデルで群衆が出口へ流れる教育デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Social Force ／ 群衆の流れ</p>
+    <h1>出口の広さで、流れは激変する</h1>
+    <p class="sub">一人ひとりは「出口へ向かう力」と「人や壁を避ける力」だけで動きます（<b>ソーシャルフォース・モデル</b>）。出口を<b>少し狭める</b>だけで詰まり（アーチ状の渋滞）が生まれます。混んでいる人ほど赤く表示。</p>
+    <span class="honest"><i class="dot"></i>教育デモ ・ 公知モデル(social force) ・ 実際の避難設計ではありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">避難完了 / 全体</div>
+    <div class="pv" data-stat>0 / 0</div>
+    <div class="pv2" data-stat2>経過 0.0s</div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i style="background:#fb923c"></i>スムーズ</span>
+    <span><i style="background:#f59e0b"></i>やや混雑</span>
+    <span><i style="background:#ef4444"></i>強い渋滞（低速）</span>
+    <span><i style="background:#22c55e"></i>出口</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="シミュレーション操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">❚❚</button>
+      <div class="field"><span class="slab">出口幅 <b data-vexit>1.0</b></span><input class="scrub" type="range" min="14" max="120" value="48" data-exit></div>
+      <div class="field"><span class="slab">人数 <b data-vn>120</b></span><input class="scrub" type="range" min="20" max="240" value="120" data-num></div>
+      <div class="field"><span class="slab">目標速度 <b data-vspd>1.0</b></span><input class="scrub" type="range" min="40" max="200" value="100" data-spd></div>
+    </div>
+    <div class="crow">
+      <button class="chip" data-act="restart">リスタート</button>
+      <span class="spacer"></span>
+      <button class="tog" data-act="heat" aria-pressed="true">混雑ヒート</button>
+      <button class="tog" data-act="vec" aria-pressed="false">向きベクトル</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知モデルの教育デモ」です</h2>
+      <p><b>ソーシャルフォース・モデル</b>（Helbing &amp; Molnár, 1995）は、歩行者を「目的地へ向かう駆動力＋人や壁からの反発力」で表す古典的な群衆モデルです。本デモは<b>教育・演出目的</b>で、実際の避難計画・安全認証の根拠ではなく、当社の LogicLock／保存則監査や予測とも<b>無関係</b>です。</p>
+      <p>各歩行者にはたらく力：</p>
+      <ul>
+        <li><b>駆動力</b>：望む速度で出口へ向かおうとする力</li>
+        <li><b>対人反発</b>：近づきすぎた相手から離れる力（指数関数で急増）</li>
+        <li><b>壁反発</b>：壁にぶつからないよう離れる力</li>
+        <li><b>詰まり（クロッギング）</b>：狭い出口では人が押し合い、流れがかえって落ちる</li>
+        <li>出口幅を変えると「流量」が大きく変わる様子を観察できます</li>
+      </ul>
+      <p>すべてブラウザ内のリアルタイム計算です。外部通信も学習済みモデルもありません。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+
+  let W=0,H=0,dpr=1;
+  let room, exitH=48, exitCY=0;
+  let agents=[], N=120, desired=1.0, escaped=0, tElapsed=0;
+  let showHeat=true, showVec=false;
+  const R=5;                 // 半径(px)
+  const A=22, B=8, WA=20, WB=6, TAU=0.34, VMAX=2.6;
+
+  function setRoom(){
+    const mx=Math.max(60,W*0.10), my=Math.max(80,H*0.16);
+    room={x0:mx, y0:my, x1:W-mx, y1:H-Math.max(150,H*0.24)};
+    exitCY=(room.y0+room.y1)/2;
+  }
+  function spawn(){
+    agents=[]; escaped=0; tElapsed=0;
+    const cols=Math.ceil(Math.sqrt(N* (room.y1-room.y0)/(room.x1-room.x0)*0.6 ))||1;
+    for(let i=0;i<N;i++){
+      agents.push({
+        x: room.x0 + 14 + Math.random()*((room.x1-room.x0)*0.5),
+        y: room.y0 + 14 + Math.random()*((room.y1-room.y0)-28),
+        vx:0, vy:0, out:false, sp:0
+      });
+    }
+  }
+
+  // 点と線分の最近点
+  function nearestOnSeg(px,py,ax,ay,bx,by){
+    const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy||1e-9;
+    let t=((px-ax)*dx+(py-ay)*dy)/L2; t=Math.max(0,Math.min(1,t));
+    return {x:ax+t*dx, y:ay+t*dy};
+  }
+  function wallSegs(){
+    const {x0,y0,x1,y1}=room, gT=exitCY-exitH/2, gB=exitCY+exitH/2;
+    return [
+      [x0,y0,x1,y0],   // top
+      [x0,y1,x1,y1],   // bottom
+      [x0,y0,x0,y1],   // left
+      [x1,y0,x1,gT],   // right upper
+      [x1,gB,x1,y1],   // right lower
+    ];
+  }
+
+  function step(dt){
+    const segs=wallSegs();
+    const vdes=desired*1.7;
+    for(const a of agents){
+      if(a.out) continue;
+      // 目標方向（出口へ→外へ）
+      let tx, ty;
+      if(a.x < room.x1-4){ tx=room.x1+8; ty=exitCY; }
+      else { tx=room.x1+120; ty=exitCY; }
+      let dx=tx-a.x, dy=ty-a.y; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl;
+      let fx=(vdes*dx - a.vx)/TAU, fy=(vdes*dy - a.vy)/TAU;
+      // 対人反発
+      for(const b of agents){
+        if(b===a||b.out) continue;
+        let rx=a.x-b.x, ry=a.y-b.y; let d=Math.hypot(rx,ry);
+        if(d<1e-4){ rx=Math.random()-.5; ry=Math.random()-.5; d=Math.hypot(rx,ry)||1; }
+        if(d<60){ const f=A*Math.exp((2*R-d)/B)/d; fx+=f*rx; fy+=f*ry; }
+      }
+      // 壁反発
+      for(const s of segs){
+        const n=nearestOnSeg(a.x,a.y,s[0],s[1],s[2],s[3]);
+        let rx=a.x-n.x, ry=a.y-n.y; let d=Math.hypot(rx,ry)||1e-4;
+        if(d<40){ const f=WA*Math.exp((R-d)/WB)/d; fx+=f*rx; fy+=f*ry; }
+      }
+      a.vx+=fx*dt; a.vy+=fy*dt;
+      const sp=Math.hypot(a.vx,a.vy);
+      if(sp>VMAX){ a.vx=a.vx/sp*VMAX; a.vy=a.vy/sp*VMAX; }
+      a.x+=a.vx*dt*60; a.y+=a.vy*dt*60; a.sp=sp;
+      // 出口の外に出たら退場
+      if(a.x>room.x1+30){ a.out=true; escaped++; }
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const {x0,y0,x1,y1}=room, gT=exitCY-exitH/2, gB=exitCY+exitH/2;
+    // 部屋床
+    ctx.fillStyle="rgba(251,146,60,.03)"; ctx.fillRect(x0,y0,x1-x0,y1-y0);
+    // 壁
+    ctx.strokeStyle="rgba(176,190,210,.5)"; ctx.lineWidth=3; ctx.lineCap="round";
+    const seg=(a,b,c,d)=>{ ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(c,d); ctx.stroke(); };
+    seg(x0,y0,x1,y0); seg(x0,y1,x1,y1); seg(x0,y0,x0,y1); seg(x1,y0,x1,gT); seg(x1,gB,x1,y1);
+    // 出口マーカー
+    ctx.strokeStyle="#22c55e"; ctx.lineWidth=3; ctx.shadowColor="#22c55e"; ctx.shadowBlur=14;
+    seg(x1,gT,x1,gB); ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(34,197,94,.85)"; ctx.font="500 11px 'Share Tech Mono',monospace"; ctx.textAlign="left";
+    ctx.fillText("EXIT", x1+8, exitCY);
+    // 人
+    for(const a of agents){
+      if(a.out) continue;
+      let col="#fb923c";
+      if(showHeat){
+        const f=Math.max(0,Math.min(1, a.sp/(desired*1.7)));   // 速いほどスムーズ
+        if(f<0.30) col="#ef4444"; else if(f<0.62) col="#f59e0b"; else col="#fb923c";
+      }
+      ctx.beginPath(); ctx.fillStyle=col; ctx.globalAlpha=0.92;
+      ctx.arc(a.x,a.y,R,0,6.28); ctx.fill(); ctx.globalAlpha=1;
+      if(showVec){
+        const s=Math.hypot(a.vx,a.vy)||1;
+        ctx.strokeStyle="rgba(255,255,255,.5)"; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(a.x+a.vx/s*9, a.y+a.vy/s*9); ctx.stroke();
+      }
+    }
+  }
+
+  let playing=true, running=true;
+  function frame(now){
+    if(running){
+      if(playing){
+        const remain=agents.some(a=>!a.out);
+        if(remain){ for(let s=0;s<2;s++) step(0.5/60*1.0); tElapsed+=1/60; }
+      }
+      draw();
+      statEl.textContent=escaped+" / "+N;
+      stat2El.textContent="経過 "+tElapsed.toFixed(1)+"s"+(escaped>=N?" ・ 完了":"");
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const exitR=root.querySelector('[data-exit]'), numR=root.querySelector('[data-num]'), spdR=root.querySelector('[data-spd]');
+  const vexit=root.querySelector('[data-vexit]'), vn=root.querySelector('[data-vn]'), vspd=root.querySelector('[data-vspd]');
+  const statEl=root.querySelector('[data-stat]'), stat2El=root.querySelector('[data-stat2]');
+  const heatBtn=root.querySelector('[data-act="heat"]'), vecBtn=root.querySelector('[data-act="vec"]');
+  const modal=root.querySelector('[data-modal]');
+  function updatePlay(){ playBtn.textContent=playing?"❚❚":"►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+
+  exitR.addEventListener("input",()=>{ exitH=+exitR.value; vexit.textContent=(exitH/48).toFixed(1); });
+  numR.addEventListener("input",()=>{ N=+numR.value; vn.textContent=N; });
+  numR.addEventListener("change",()=>{ spawn(); });
+  spdR.addEventListener("input",()=>{ desired=+spdR.value/100; vspd.textContent=desired.toFixed(1); });
+  root.querySelector('[data-act="restart"]').addEventListener("click",()=>{ spawn(); playing=true; updatePlay(); });
+  heatBtn.addEventListener("click",()=>{ showHeat=!showHeat; heatBtn.setAttribute("aria-pressed",String(showHeat)); });
+  vecBtn.addEventListener("click",()=>{ showVec=!showVec; vecBtn.setAttribute("aria-pressed",String(showVec)); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height;
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    setRoom(); spawn();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window) new ResizeObserver(resize).observe(root); else addEventListener("resize",resize);
+
+  resize(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

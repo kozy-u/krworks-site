@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A*経路計画 — 倉庫グリッドの最短経路 | KR works LLC</title>
+<meta name="description" content="倉庫グリッド上で A* アルゴリズムが最短経路を探索する様子を可視化した教育デモ。公知アルゴリズムのみで動作し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#38bdf8; --accentG:rgba(56,189,248,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  /* ── 統一ナビ＋HOME（全デモ共通パターン） ── */
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  /* ── ステージ ── */
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(56,189,248,.08) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 60%,#0c0f1a 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:54ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+
+  /* 演出ラベル（誠実フレーミング） */
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(56,189,248,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  /* ステータス */
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  /* 凡例 */
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(118px,17vw,150px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;max-width:62ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:3px;flex:none;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+
+  /* コントロール */
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(94%,880px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(56,189,248,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(56,189,248,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .scrub{flex:1;min-width:120px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(56,189,248,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(56,189,248,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+  #stage .feedtag{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .feedtag b{color:var(--accent);font-weight:400;}
+
+  /* 解説モーダル */
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(56,189,248,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(56,189,248,.22);}
+
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="倉庫グリッド上で A* アルゴリズムが最短経路を探索する教育デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">A* Pathfinding ／ 経路計画</p>
+    <h1>倉庫の最短経路を、A* が探す</h1>
+    <p class="sub">緑の<b>スタート</b>から赤の<b>ゴール</b>まで、A* は「ここまでの距離 g」と「ゴールまでの推定 h」を足した <b>f = g + h</b> が小さいマスから順に展開します。壁を描いて、賢い探索の広がり方を眺めてください。</p>
+    <span class="honest"><i class="dot"></i>教育デモ ・ 公知アルゴリズム(A*) ・ 予測でも保存則監査でもありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">Visited / Path</div>
+    <div class="pv" data-stat>0 / —</div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i style="background:#22c55e"></i>スタート</span>
+    <span><i style="background:#f87171"></i>ゴール</span>
+    <span><i style="background:#1b2330"></i>壁</span>
+    <span><i style="background:rgba(56,189,248,.30)"></i>探索済み(closed)</span>
+    <span><i style="background:rgba(56,189,248,.62)"></i>フロンティア(open)</span>
+    <span><i style="background:#fde047"></i>最短経路</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="再生と操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="探索の再生／一時停止">❚❚</button>
+      <span class="slab">速度</span>
+      <input class="scrub" type="range" min="1" max="40" value="14" aria-label="探索速度">
+      <span class="feedtag">MODE: <b data-mode>壁を描く</b></span>
+    </div>
+    <div class="crow">
+      <button class="tog" data-tool="wall" aria-pressed="true">壁</button>
+      <button class="tog" data-tool="start" aria-pressed="false">始点</button>
+      <button class="tog" data-tool="goal" aria-pressed="false">終点</button>
+      <span class="spacer"></span>
+      <button class="chip" data-act="maze">迷路生成</button>
+      <button class="chip" data-act="clear">壁を消す</button>
+      <button class="chip" data-act="restart">探索やり直し</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知アルゴリズムの教育デモ」です</h2>
+      <p>A*（A-star）は<b>1968年に公表された古典的な最短経路アルゴリズム</b>です（Hart, Nilsson, Raphael）。本デモは倉庫AGVの経路計画を題材にした<b>教育・演出目的</b>の可視化で、当社の LogicLock／保存則監査や、何かの予測とは<b>無関係</b>です。</p>
+      <p>動かし方：</p>
+      <ul>
+        <li><b>f = g + h</b> が最小のマスから展開（g＝実コスト、h＝マンハッタン距離の推定）</li>
+        <li><b>open（フロンティア）</b>＝これから調べる候補、<b>closed</b>＝調べ終えた場所</li>
+        <li>ゴールに到達したら親をたどって<b>最短経路</b>を黄色で復元</li>
+        <li>「壁／始点／終点」を切り替えてドラッグで編集 → 自動でやり直し</li>
+        <li>h は実距離以下なので A* は<b>最短性を保証</b>（admissible heuristic）</li>
+      </ul>
+      <p>すべてブラウザ内のリアルタイム計算です。外部通信も学習済みモデルもありません。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root = document.getElementById("stage");
+  const canvas = root.querySelector("canvas");
+  const ctx = canvas.getContext("2d");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let W=0,H=0,dpr=1,cell=26,cols=0,rows=0;
+  let walls,start,goal;
+  let open,came,gScore,fScore,inOpen,closed,path,done,reached;
+
+  function key(x,y){ return y*cols+x; }
+  function inb(x,y){ return x>=0&&y>=0&&x<cols&&y<rows; }
+  function heuristic(x,y){ return Math.abs(x-goal.x)+Math.abs(y-goal.y); }
+
+  function resetSearch(){
+    open=[]; came=new Map(); gScore=new Map(); fScore=new Map();
+    inOpen=new Set(); closed=new Set(); path=null; done=false; reached=false;
+    const s=key(start.x,start.y);
+    gScore.set(s,0); fScore.set(s,heuristic(start.x,start.y));
+    open.push(s); inOpen.add(s);
+  }
+
+  function lowestF(){
+    let bi=0,bf=Infinity;
+    for(let i=0;i<open.length;i++){ const f=fScore.get(open[i]); if(f<bf){bf=f;bi=i;} }
+    return bi;
+  }
+
+  // 1ステップ＝1ノード展開
+  function stepSearch(){
+    if(done) return;
+    if(open.length===0){ done=true; return; }
+    const bi=lowestF(), cur=open.splice(bi,1)[0];
+    inOpen.delete(cur); closed.add(cur);
+    const cx=cur%cols, cy=(cur/cols)|0;
+    if(cx===goal.x&&cy===goal.y){ done=true; reached=true; reconstruct(cur); return; }
+    const nb=[[1,0],[-1,0],[0,1],[0,-1]];
+    for(const [dx,dy] of nb){
+      const nx=cx+dx, ny=cy+dy;
+      if(!inb(nx,ny)) continue;
+      const nk=key(nx,ny);
+      if(walls.has(nk)||closed.has(nk)) continue;
+      const tg=gScore.get(cur)+1;
+      if(tg<(gScore.has(nk)?gScore.get(nk):Infinity)){
+        came.set(nk,cur); gScore.set(nk,tg); fScore.set(nk,tg+heuristic(nx,ny));
+        if(!inOpen.has(nk)){ open.push(nk); inOpen.add(nk); }
+      }
+    }
+  }
+  function reconstruct(end){
+    const p=[end]; let c=end;
+    while(came.has(c)){ c=came.get(c); p.push(c); }
+    path=p.reverse();
+  }
+
+  /* ── 迷路生成（ランダム障害物＋少しの構造） ── */
+  function genMaze(){
+    walls=new Set();
+    for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+      if(Math.random()<0.26) walls.add(key(x,y));
+    }
+    // 始点・終点まわりは空ける
+    for(const c of [start,goal]) for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      const k=key(c.x+dx,c.y+dy); walls.delete(k);
+    }
+    resetSearch();
+  }
+
+  function setupGrid(){
+    cols=Math.max(8,Math.floor(W/cell));
+    rows=Math.max(6,Math.floor(H/cell));
+    start={x:Math.max(1,Math.floor(cols*0.10)), y:Math.floor(rows*0.5)};
+    goal ={x:Math.min(cols-2,Math.floor(cols*0.88)), y:Math.floor(rows*0.5)};
+    if(!walls) walls=new Set();
+    resetSearch();
+  }
+
+  /* ── 描画 ── */
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const ox=(W-cols*cell)/2, oy=(H-rows*cell)/2;
+    // 背景グリッド
+    ctx.strokeStyle="rgba(56,189,248,.06)"; ctx.lineWidth=1;
+    for(let x=0;x<=cols;x++){ ctx.beginPath(); ctx.moveTo(ox+x*cell,oy); ctx.lineTo(ox+x*cell,oy+rows*cell); ctx.stroke(); }
+    for(let y=0;y<=rows;y++){ ctx.beginPath(); ctx.moveTo(ox,oy+y*cell); ctx.lineTo(ox+cols*cell,oy+y*cell); ctx.stroke(); }
+    const pad=2;
+    // closed / open
+    for(const k of closed){ const x=k%cols,y=(k/cols)|0; ctx.fillStyle="rgba(56,189,248,.18)"; ctx.fillRect(ox+x*cell+pad,oy+y*cell+pad,cell-pad*2,cell-pad*2); }
+    for(const k of inOpen){ const x=k%cols,y=(k/cols)|0; ctx.fillStyle="rgba(56,189,248,.50)"; ctx.fillRect(ox+x*cell+pad,oy+y*cell+pad,cell-pad*2,cell-pad*2); }
+    // walls
+    ctx.fillStyle="#1b2330";
+    for(const k of walls){ const x=k%cols,y=(k/cols)|0; ctx.fillRect(ox+x*cell+1,oy+y*cell+1,cell-2,cell-2); }
+    // path
+    if(path){
+      ctx.strokeStyle="#fde047"; ctx.lineWidth=Math.max(3,cell*0.18); ctx.lineCap="round"; ctx.lineJoin="round";
+      ctx.shadowColor="rgba(253,224,71,.8)"; ctx.shadowBlur=10;
+      ctx.beginPath();
+      path.forEach((k,i)=>{ const x=k%cols,y=(k/cols)|0, px=ox+x*cell+cell/2, py=oy+y*cell+cell/2; i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+      ctx.stroke(); ctx.shadowBlur=0;
+    }
+    // start / goal
+    drawCell(ox,oy,start.x,start.y,"#22c55e");
+    drawCell(ox,oy,goal.x,goal.y,"#f87171");
+    if(done && !reached){
+      ctx.fillStyle="rgba(248,113,113,.9)"; ctx.font="500 14px 'Share Tech Mono',monospace"; ctx.textAlign="center";
+      ctx.fillText("到達不能（壁で塞がれています）", W/2, oy-10>20?oy-10:18);
+    }
+  }
+  function drawCell(ox,oy,x,y,col){
+    ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=16;
+    ctx.fillRect(ox+x*cell+2,oy+y*cell+2,cell-4,cell-4); ctx.shadowBlur=0;
+  }
+
+  /* ── ループ ── */
+  let playing=true, running=true, speed=14, acc=0;
+  function frame(){
+    if(running){
+      if(playing && !done){
+        acc+=speed;
+        let budget=Math.max(1,Math.floor(acc/6)); acc-=budget*6;
+        while(budget-- >0 && !done) stepSearch();
+      }
+      draw();
+      statEl.textContent = closed.size + " / " + (path? path.length : (done?"なし":"探索中"));
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── 入力（壁/始点/終点の編集） ── */
+  let tool="wall", painting=false, paintVal=true;
+  function cellAt(ev){
+    const r=canvas.getBoundingClientRect();
+    const ox=(W-cols*cell)/2, oy=(H-rows*cell)/2;
+    const x=Math.floor(((ev.clientX-r.left)-ox)/cell);
+    const y=Math.floor(((ev.clientY-r.top )-oy)/cell);
+    return inb(x,y)?{x,y}:null;
+  }
+  function applyAt(c){
+    if(!c) return;
+    const k=key(c.x,c.y);
+    if(tool==="wall"){
+      if(c.x===start.x&&c.y===start.y) return; if(c.x===goal.x&&c.y===goal.y) return;
+      if(paintVal) walls.add(k); else walls.delete(k);
+      resetSearch();
+    } else if(tool==="start"){
+      if(walls.has(k)||(c.x===goal.x&&c.y===goal.y)) return; start={x:c.x,y:c.y}; resetSearch();
+    } else if(tool==="goal"){
+      if(walls.has(k)||(c.x===start.x&&c.y===start.y)) return; goal={x:c.x,y:c.y}; resetSearch();
+    }
+  }
+  canvas.addEventListener("pointerdown",e=>{ canvas.setPointerCapture(e.pointerId); painting=true;
+    const c=cellAt(e); if(tool==="wall"&&c) paintVal=!walls.has(key(c.x,c.y)); applyAt(c); });
+  canvas.addEventListener("pointermove",e=>{ if(painting) applyAt(cellAt(e)); });
+  canvas.addEventListener("pointerup",()=>painting=false);
+  canvas.addEventListener("pointercancel",()=>painting=false);
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const scrub=root.querySelector('.scrub');
+  const statEl=root.querySelector('[data-stat]');
+  const modeEl=root.querySelector('[data-mode]');
+  const toolBtns=[...root.querySelectorAll('[data-tool]')];
+  const modal=root.querySelector('[data-modal]');
+  const TOOLN={wall:"壁を描く",start:"始点を置く",goal:"終点を置く"};
+
+  function updatePlay(){ playBtn.textContent = playing ? "❚❚" : "►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  scrub.addEventListener("input",()=>speed=+scrub.value);
+  toolBtns.forEach(b=>b.addEventListener("click",()=>{
+    tool=b.dataset.tool; modeEl.textContent=TOOLN[tool];
+    toolBtns.forEach(o=>o.setAttribute("aria-pressed",String(o===b)));
+  }));
+  root.querySelector('[data-act="maze"]').addEventListener("click",()=>{ genMaze(); playing=true; updatePlay(); });
+  root.querySelector('[data-act="clear"]').addEventListener("click",()=>{ walls=new Set(); resetSearch(); playing=true; updatePlay(); });
+  root.querySelector('[data-act="restart"]').addEventListener("click",()=>{ resetSearch(); playing=true; updatePlay(); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  /* ── リサイズ・可視性 ── */
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height; cell=Math.max(18,Math.min(34,Math.round(Math.min(W,H)/22)));
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    setupGrid();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window) new ResizeObserver(resize).observe(root); else addEventListener("resize",resize);
+
+  resize(); genMaze(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

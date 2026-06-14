@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ゲーム木探索 — minimax と α-β枝刈り | KR works LLC</title>
+<meta name="description" content="ミニマックス法とアルファベータ枝刈りが、読む必要のない枝を切り落とす様子を可視化した教育デモ。公知アルゴリズムのみで動作し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#c084fc; --accentG:rgba(192,132,252,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(192,132,252,.08) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 60%,#0c0f1a 100%);}
+  #stage canvas#tree{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:50ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(192,132,252,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:#fda4af;margin-top:4px;}
+  @media(max-width:740px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  /* ○× 盤パネル */
+  #board{position:absolute;right:clamp(16px,3vw,34px);bottom:clamp(96px,15vw,128px);z-index:6;width:148px;border:1px solid var(--bd);border-radius:12px;background:rgba(9,12,20,.78);backdrop-filter:blur(12px);padding:12px;}
+  #board .bt{font-family:'Share Tech Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;text-align:center;}
+  #board .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+  #board .sq{aspect-ratio:1;border:1px solid var(--bd);border-radius:6px;background:rgba(255,255,255,.02);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.4rem;cursor:pointer;transition:.15s;color:#fff;}
+  #board .sq:hover{border-color:var(--accent);background:rgba(192,132,252,.1);}
+  #board .sq.x{color:#7dd3fc;} #board .sq.o{color:var(--accent);}
+  #board .bs{margin-top:9px;font-family:'Share Tech Mono',monospace;font-size:.66rem;color:var(--soft);text-align:center;min-height:1.2em;}
+  #board .reset{margin-top:8px;width:100%;appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.64rem;letter-spacing:.04em;padding:.5em;border-radius:7px;cursor:pointer;}
+  #board .reset:hover{color:#fff;border-color:var(--accent);}
+  @media(max-width:560px){#board{display:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(94%,820px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(192,132,252,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(192,132,252,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .scrub{flex:1;min-width:120px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(192,132,252,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(192,132,252,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+  #stage .feedtag{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .feedtag b{color:var(--accent);font-weight:400;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(192,132,252,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(192,132,252,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas id="tree" aria-label="ミニマックスとアルファベータ枝刈りの探索木アニメーション。"></canvas>
+
+  <header class="head">
+    <p class="ey">Minimax ／ α-β Pruning</p>
+    <h1>読まなくていい枝は、切り落とす</h1>
+    <p class="sub">▲は<b>自分の手番(MAX)</b>、▼は<b>相手の手番(MIN)</b>。葉の数字は最終的な得点です。α-β法は「結論が変わらないと分かった枝」を<b>探索せずに刈り</b>ます（点線＝枝刈り）。同じ探索で動く○×にも勝てません。</p>
+    <span class="honest"><i class="dot"></i>教育デモ ・ 公知アルゴリズム(minimax/α-β) ・ 予測ではありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">探索した葉 / 全葉</div>
+    <div class="pv" data-stat>0 / 0</div>
+    <div class="pv2" data-stat2>枝刈り 0</div>
+  </div>
+
+  <div id="board">
+    <div class="bt">同じAIと○×</div>
+    <div class="grid3" data-grid></div>
+    <div class="bs" data-bs>あなた＝✕（先手）</div>
+    <button class="reset" data-breset>もう一局</button>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="再生と操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="探索の再生／一時停止">❚❚</button>
+      <span class="slab">速度</span>
+      <input class="scrub" type="range" min="1" max="40" value="16" aria-label="探索アニメーション速度">
+      <span class="feedtag">TREE: <b data-feed>ランダム生成</b></span>
+    </div>
+    <div class="crow">
+      <button class="chip" data-act="step">1手進める</button>
+      <button class="chip" data-act="replay">最初から</button>
+      <button class="chip" data-act="newtree">新しい木</button>
+      <span class="spacer"></span>
+      <button class="tog" data-act="prune" aria-pressed="true">α-β枝刈り</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知アルゴリズムの教育デモ」です</h2>
+      <p><b>ミニマックス法</b>は二人零和ゲームの古典手法で、自分は得点を最大化(MAX)、相手は最小化(MIN)すると仮定して先読みします。<b>α-β枝刈り</b>は、結果に影響しない枝の探索を省く高速化です（教科書的な公知技術）。</p>
+      <p>本デモは<b>教育・演出目的</b>で、当社の LogicLock／保存則監査や、何かの予測とは<b>無関係</b>です。</p>
+      <ul>
+        <li><b>▲ MAX</b>＝得点を最大化する手番、<b>▼ MIN</b>＝最小化する手番</li>
+        <li><b>α</b>＝MAX側がすでに保証できる下限、<b>β</b>＝MIN側の上限</li>
+        <li><b>β ≤ α</b> になった瞬間、残りの兄弟枝は<b>読む価値がない</b>ので刈る</li>
+        <li>枝刈りONとOFFで「探索した葉の数」が変わるのを見比べてください</li>
+        <li>右下の○×は同じ探索で指すので<b>最善（あなたは勝てない）</b>です</li>
+      </ul>
+      <p>すべてブラウザ内のリアルタイム計算です。外部通信も学習済みモデルもありません。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root=document.getElementById("stage");
+  const canvas=document.getElementById("tree");
+  const ctx=canvas.getContext("2d");
+
+  let W=0,H=0,dpr=1;
+  const DEPTH=4;
+  let tree, leaves, events, totalLeaves, ei, useprune=true;
+  let visitedLeaves=0, prunedCount=0;
+
+  const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+  function buildTree(depth){
+    if(depth===0) return {leaf:true, util:ri(-9,9)};
+    const b=2+(Math.random()<0.4?1:0);
+    const ch=[]; for(let i=0;i<b;i++) ch.push(buildTree(depth-1));
+    return {leaf:false, children:ch};
+  }
+  function countLeaves(n){ return n.leaf?1:n.children.reduce((s,c)=>s+countLeaves(c),0); }
+
+  function layout(){
+    let lx=0; const xs=[];
+    (function rec(n,d){
+      n.depth=d; n.state="idle"; n.shown=false; n.label=null; n.pruned=false;
+      if(n.leaf){ n.lx=lx++; return; }
+      n.children.forEach(c=>rec(c,d+1));
+      n.lx=(n.children[0].lx+n.children[n.children.length-1].lx)/2;
+    })(tree,0);
+    totalLeaves=lx;
+  }
+  function place(){
+    const mx=Math.max(40,W*0.06), top=H*0.30, bot=H*0.86;
+    (function rec(n){
+      n.x = totalLeaves>1 ? mx + n.lx/(totalLeaves-1)*(W-2*mx) : W/2;
+      n.y = top + n.depth/DEPTH*(bot-top);
+      if(!n.leaf) n.children.forEach(rec);
+    })(tree);
+  }
+
+  // α-β（イベント記録）。isMax: 深さ偶数=MAX
+  function record(){
+    events=[]; 
+    function markPruned(n){ n.pruned=true; if(!n.leaf) n.children.forEach(markPruned); }
+    function ab(n,alpha,beta,isMax){
+      events.push({t:"enter",n});
+      if(n.leaf){ events.push({t:"leaf",n,v:n.util}); n.val=n.util; return n.util; }
+      let v;
+      if(isMax){ v=-Infinity;
+        for(let i=0;i<n.children.length;i++){
+          const cv=ab(n.children[i],alpha,beta,false);
+          v=Math.max(v,cv); alpha=Math.max(alpha,v);
+          if(useprune && beta<=alpha){
+            for(let j=i+1;j<n.children.length;j++){ events.push({t:"prune",n:n.children[j]}); }
+            break;
+          }
+        }
+      } else { v=Infinity;
+        for(let i=0;i<n.children.length;i++){
+          const cv=ab(n.children[i],alpha,beta,true);
+          v=Math.min(v,cv); beta=Math.min(beta,v);
+          if(useprune && beta<=alpha){
+            for(let j=i+1;j<n.children.length;j++){ events.push({t:"prune",n:n.children[j]}); }
+            break;
+          }
+        }
+      }
+      n.val=v; events.push({t:"set",n,v}); return v;
+    }
+    ab(tree,-Infinity,Infinity,true);
+  }
+
+  function regen(){
+    do{ tree=buildTree(DEPTH); }while(countLeaves(tree)>34 || countLeaves(tree)<8);
+    layout(); record(); resetAnim();
+  }
+  function resetAnim(){
+    ei=0; visitedLeaves=0; prunedCount=0;
+    (function rec(n){ n.shown=false; n.state="idle"; n.label=null; n.pruned=false; if(!n.leaf) n.children.forEach(rec); })(tree);
+  }
+  function applyEvent(e){
+    if(e.t==="enter"){ e.n.shown=true; e.n.state="active"; }
+    else if(e.t==="leaf"){ e.n.shown=true; e.n.label=e.v; e.n.state="leafdone"; visitedLeaves++; }
+    else if(e.t==="set"){ e.n.label=e.v; e.n.state="done"; }
+    else if(e.t==="prune"){ (function rec(n){ n.shown=true; n.pruned=true; if(!n.leaf) n.children.forEach(rec); })(e.n); prunedCount++; }
+  }
+  function advance(k){ while(k-->0 && ei<events.length){ applyEvent(events[ei++]); } }
+
+  /* ── 描画 ── */
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const R=Math.max(7,Math.min(13,W/90));
+    // edges
+    (function edges(n){
+      if(n.leaf) return;
+      for(const c of n.children){
+        if(c.shown||n.shown){
+          ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(c.x,c.y);
+          if(c.pruned){ ctx.setLineDash([3,4]); ctx.strokeStyle="rgba(248,113,113,.30)"; ctx.lineWidth=1.2; }
+          else { ctx.setLineDash([]); ctx.strokeStyle="rgba(192,132,252,.30)"; ctx.lineWidth=1.4; }
+          ctx.stroke(); ctx.setLineDash([]);
+        }
+        edges(c);
+      }
+    })(tree);
+    // nodes
+    (function nodes(n){
+      if(n.shown) drawNode(n,R);
+      if(!n.leaf) n.children.forEach(nodes);
+    })(tree);
+  }
+  function drawNode(n,R){
+    const pruned=n.pruned;
+    let col = pruned ? "rgba(248,113,113,.45)"
+            : n.state==="active" ? "#c084fc"
+            : n.depth%2===0 ? "#a78bfa" : "#7dd3fc";
+    ctx.save();
+    if(n.state==="active" && !pruned){ ctx.shadowColor="#c084fc"; ctx.shadowBlur=14; }
+    ctx.fillStyle = pruned ? "rgba(20,12,20,.9)" : "rgba(12,14,22,.95)";
+    ctx.strokeStyle=col; ctx.lineWidth=2;
+    if(n.leaf){
+      ctx.beginPath(); ctx.rect(n.x-R,n.y-R*0.8,R*2,R*1.6); ctx.fill(); ctx.stroke();
+    } else {
+      const up = n.depth%2===0; // MAX=▲
+      ctx.beginPath();
+      if(up){ ctx.moveTo(n.x,n.y-R); ctx.lineTo(n.x+R,n.y+R*0.85); ctx.lineTo(n.x-R,n.y+R*0.85); }
+      else  { ctx.moveTo(n.x,n.y+R); ctx.lineTo(n.x+R,n.y-R*0.85); ctx.lineTo(n.x-R,n.y-R*0.85); }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+    // label
+    if(n.label!==null && !pruned){
+      ctx.fillStyle="#fff"; ctx.font=`600 ${Math.round(R*0.95)}px 'Share Tech Mono',monospace`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(String(n.label), n.x, n.y+(n.leaf?0:(n.depth%2===0?R*0.25:-R*0.2)));
+    }
+    if(pruned && n.leaf){
+      ctx.strokeStyle="rgba(248,113,113,.6)"; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(n.x-R*0.6,n.y-R*0.5); ctx.lineTo(n.x+R*0.6,n.y+R*0.5);
+      ctx.moveTo(n.x+R*0.6,n.y-R*0.5); ctx.lineTo(n.x-R*0.6,n.y+R*0.5); ctx.stroke();
+    }
+  }
+
+  /* ── ループ ── */
+  let playing=true, running=true, speed=16, acc=0;
+  function frame(){
+    if(running){
+      if(playing && ei<events.length){ acc+=speed; const k=Math.max(1,Math.floor(acc/12)); acc-=k*12; advance(k); }
+      draw();
+      statEl.textContent = visitedLeaves+" / "+totalLeaves;
+      stat2El.textContent = "枝刈り "+prunedCount;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const scrub=root.querySelector('.scrub');
+  const statEl=root.querySelector('[data-stat]');
+  const stat2El=root.querySelector('[data-stat2]');
+  const pruneBtn=root.querySelector('[data-act="prune"]');
+  const feedEl=root.querySelector('[data-feed]');
+  const modal=root.querySelector('[data-modal]');
+  function updatePlay(){ playBtn.textContent=playing?"❚❚":"►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  scrub.addEventListener("input",()=>speed=+scrub.value);
+  root.querySelector('[data-act="step"]').addEventListener("click",()=>{ playing=false; updatePlay();
+    // 次の「葉評価 or set」まで進める＝1意味単位
+    let guard=0; do{ if(ei>=events.length)break; applyEvent(events[ei]); const t=events[ei].t; ei++; if(t==="leaf"||t==="set"||t==="prune")break; }while(guard++<200); });
+  root.querySelector('[data-act="replay"]').addEventListener("click",()=>{ resetAnim(); playing=true; updatePlay(); });
+  root.querySelector('[data-act="newtree"]').addEventListener("click",()=>{ regen(); playing=true; updatePlay(); });
+  pruneBtn.addEventListener("click",()=>{ useprune=!useprune; pruneBtn.setAttribute("aria-pressed",String(useprune));
+    feedEl.textContent = useprune?"ランダム生成":"全探索(枝刈りOFF)"; record(); resetAnim(); playing=true; updatePlay(); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  /* ── ○× 盤（フル minimax / α-β・人間=✕先手・AI最善） ── */
+  const gridEl=root.querySelector('[data-grid]');
+  const bsEl=root.querySelector('[data-bs]');
+  let bd, over;
+  const LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  function winner(b){ for(const [a,c,d] of LINES){ if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; } return b.includes("")?null:"draw"; }
+  function bMinimax(b,player,alpha,beta){
+    const w=winner(b);
+    if(w==="O") return 10; if(w==="X") return -10; if(w==="draw") return 0;
+    if(player==="O"){ let best=-Infinity;
+      for(let i=0;i<9;i++) if(b[i]===""){ b[i]="O"; best=Math.max(best,bMinimax(b,"X",alpha,beta)); b[i]=""; alpha=Math.max(alpha,best); if(beta<=alpha)break; }
+      return best;
+    } else { let best=Infinity;
+      for(let i=0;i<9;i++) if(b[i]===""){ b[i]="X"; best=Math.min(best,bMinimax(b,"O",alpha,beta)); b[i]=""; beta=Math.min(beta,best); if(beta<=alpha)break; }
+      return best;
+    }
+  }
+  function aiMove(){
+    let bi=-1,bv=-Infinity;
+    for(let i=0;i<9;i++) if(bd[i]===""){ bd[i]="O"; const v=bMinimax(bd,"X",-Infinity,Infinity); bd[i]=""; if(v>bv){bv=v;bi=i;} }
+    if(bi>=0) bd[bi]="O";
+  }
+  function renderBoard(){
+    [...gridEl.children].forEach((sq,i)=>{ sq.textContent=bd[i]; sq.className="sq"+(bd[i]==="X"?" x":bd[i]==="O"?" o":""); });
+    const w=winner(bd);
+    if(w==="X") bsEl.textContent="あなたの勝ち！（稀）";
+    else if(w==="O") bsEl.textContent="AIの勝ち";
+    else if(w==="draw") bsEl.textContent="引き分け";
+    else bsEl.textContent="あなた＝✕（先手）";
+    over = !!w;
+  }
+  function newGame(){ bd=Array(9).fill(""); over=false; renderBoard(); }
+  function buildBoard(){
+    for(let i=0;i<9;i++){ const sq=document.createElement("div"); sq.className="sq"; sq.setAttribute("role","button"); sq.dataset.i=i;
+      sq.addEventListener("click",()=>{
+        if(over||bd[i]!=="") return;
+        bd[i]="X"; renderBoard(); if(over) return;
+        setTimeout(()=>{ aiMove(); renderBoard(); },180);
+      });
+      gridEl.appendChild(sq);
+    }
+    newGame();
+  }
+  root.querySelector('[data-breset]').addEventListener("click",newGame);
+
+  /* ── リサイズ・可視性 ── */
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height;
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); place();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window) new ResizeObserver(resize).observe(root); else addEventListener("resize",resize);
+
+  buildBoard(); regen(); resize(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

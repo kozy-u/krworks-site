@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NN決定境界 — 学習する分類器 | KR works LLC</title>
+<meta name="description" content="小さなニューラルネットが2次元の点分類を学習し、決定境界をリアルタイムに描く教育デモ。すべてブラウザ内で学習し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#f472b6; --accentG:rgba(244,114,182,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(244,114,182,.07) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 60%,#0c0f1a 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:50ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(244,114,182,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);margin-top:4px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,196px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:50%;flex:none;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(94%,900px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(244,114,182,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(244,114,182,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{width:120px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(244,114,182,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  #stage .chip{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.42em .8em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover{color:#fff;border-color:var(--accent);background:rgba(244,114,182,.1);}
+  #stage .chip[aria-current="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(244,114,182,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(244,114,182,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="小さなニューラルネットが2次元の点分類を学習し決定境界を描く教育デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Neural Net ／ 決定境界</p>
+    <h1>ネットが、境界線を描けるようになる</h1>
+    <p class="sub">2色の点を分けるため、小さなニューラルネット（2-8-8-1）が<b>誤差逆伝播</b>で重みを少しずつ更新します。背景の色は「ここはどちらの色だと判断するか」。<b>渦巻き</b>のような難しい形ほど境界が曲がります。</p>
+    <span class="honest"><i class="dot"></i>教育デモ ・ 公知手法(MLP/誤差逆伝播) ・ ブラウザ内学習で予測ではありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">エポック / 正答率</div>
+    <div class="pv" data-stat>0 / 0%</div>
+    <div class="pv2" data-stat2>loss —</div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i style="background:#f472b6"></i>クラスA</span>
+    <span><i style="background:#38bdf8"></i>クラスB</span>
+    <span><i style="background:rgba(244,114,182,.25)"></i>A領域</span>
+    <span><i style="background:rgba(56,189,248,.25)"></i>B領域</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="学習操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="学習の再生／一時停止">❚❚</button>
+      <div class="chips" role="group" aria-label="データセット">
+        <button class="chip" data-data="circle" aria-current="true">円</button>
+        <button class="chip" data-data="xor">XOR</button>
+        <button class="chip" data-data="spiral">渦巻き</button>
+        <button class="chip" data-data="gauss">二峰</button>
+      </div>
+    </div>
+    <div class="crow">
+      <span class="slab">学習率 <b data-vlr>0.03</b></span>
+      <input class="scrub" type="range" min="1" max="120" value="30" data-lr aria-label="学習率">
+      <span class="spacer"></span>
+      <button class="chip" data-act="reinit">重み初期化</button>
+      <button class="chip" data-act="reshuffle">データ再生成</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知手法の教育デモ」です</h2>
+      <p>多層パーセプトロン（MLP）を<b>誤差逆伝播（バックプロパゲーション）</b>で学習させる、機械学習入門の定番です。本デモは<b>教育・演出目的</b>で、当社の LogicLock／保存則監査や、業務上の予測とは<b>無関係</b>です。学習も推論もすべてあなたのブラウザ内で行われます。</p>
+      <ul>
+        <li><b>構造</b>：入力2 → 隠れ層8 → 隠れ層8 → 出力1（活性化 tanh）</li>
+        <li><b>背景色</b>：各地点をネットがどちらのクラスと判断するか（濃いほど確信が強い）</li>
+        <li><b>学習率</b>：大きいと速いが不安定、小さいと安定だが遅い</li>
+        <li><b>難易度</b>：円＜二峰＜XOR＜渦巻き の順に境界が複雑</li>
+        <li>収束したら「データ再生成」や「重み初期化」で学習し直せます</li>
+      </ul>
+      <p>外部通信も学習済みモデルもありません。重みは毎回ランダム初期化です。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+
+  let W=0,H=0,dpr=1, plot={x:0,y:0,s:0};   // 正方形プロット領域
+  const D=5;                                // データ領域 [-D,D]
+  let data=[], kind="circle", lr=0.03, epoch=0;
+  let net, gridN=64, bImg=null, bcv=document.createElement("canvas"), bctx=bcv.getContext("2d");
+
+  /* ── データ生成 ── */
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  function gen(kind){
+    const out=[], n=190;
+    if(kind==="circle"){
+      for(let i=0;i<n;i++){ const a=rnd(0,6.283), r=Math.sqrt(Math.random())*D; const x=Math.cos(a)*r, y=Math.sin(a)*r;
+        out.push({x,y,l: r< D*0.5 ? 1 : -1}); }
+    } else if(kind==="xor"){
+      for(let i=0;i<n;i++){ let x=rnd(-D,D), y=rnd(-D,D); if(Math.abs(x)<0.6)x+=0.8*Math.sign(x||1); if(Math.abs(y)<0.6)y+=0.8*Math.sign(y||1);
+        out.push({x,y,l: (x*y>0)?1:-1}); }
+    } else if(kind==="spiral"){
+      const m=n/2;
+      for(let c=0;c<2;c++) for(let i=0;i<m;i++){ const t=i/m*3.4; const r=t/3.4*D; const a=t*2.2 + c*Math.PI + rnd(-0.18,0.18);
+        out.push({x:Math.cos(a)*r+rnd(-0.2,0.2), y:Math.sin(a)*r+rnd(-0.2,0.2), l:c?1:-1}); }
+    } else { // gauss
+      const g=(cx,cy,l)=>{ for(let i=0;i<n/2;i++){ const a=rnd(0,6.283),r=Math.abs(randn())*1.4; out.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, l}); } };
+      g(-2.2,-2.2,1); g(2.2,2.2,-1);
+    }
+    return out;
+  }
+  function randn(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.283*v); }
+
+  /* ── 小さなMLP（vanilla backprop, tanh, MSE） ── */
+  function makeNet(sizes){
+    const Wm=[], b=[];
+    for(let l=1;l<sizes.length;l++){
+      const rows=sizes[l], cols=sizes[l-1], m=[];
+      const sc=Math.sqrt(2/(cols+rows));
+      for(let i=0;i<rows;i++){ const r=new Float64Array(cols); for(let j=0;j<cols;j++) r[j]=randn()*sc; m.push(r); }
+      Wm.push(m); b.push(new Float64Array(rows));
+    }
+    return {Wm,b,sizes};
+  }
+  function forward(nt,x){
+    let a=x.slice(); const acts=[a];
+    for(let l=0;l<nt.Wm.length;l++){
+      const Wl=nt.Wm[l], bl=nt.b[l], out=new Array(Wl.length);
+      for(let i=0;i<Wl.length;i++){ let s=bl[i]; const row=Wl[i]; for(let j=0;j<a.length;j++) s+=row[j]*a[j]; out[i]=Math.tanh(s); }
+      a=out; acts.push(a);
+    }
+    nt._acts=acts; return a[0];
+  }
+  function trainOne(nt,x,y){
+    const out=forward(nt,x), L=nt.Wm.length, acts=nt._acts;
+    const delta=new Array(L);
+    let d=new Array(acts[L].length); d[0]=(out-y)*(1-out*out); delta[L-1]=d;
+    for(let l=L-2;l>=0;l--){
+      const aSelf=acts[l+1], next=nt.Wm[l+1], nd=delta[l+1], cur=new Array(nt.Wm[l].length);
+      for(let i=0;i<cur.length;i++){ let s=0; for(let k=0;k<next.length;k++) s+=next[k][i]*nd[k]; cur[i]=s*(1-aSelf[i]*aSelf[i]); }
+      delta[l]=cur;
+    }
+    for(let l=0;l<L;l++){ const aIn=acts[l], dl=delta[l], Wl=nt.Wm[l], bl=nt.b[l];
+      for(let i=0;i<Wl.length;i++){ const row=Wl[i], g=lr*dl[i]; for(let j=0;j<aIn.length;j++) row[j]-=g*aIn[j]; bl[i]-=g; }
+    }
+    return 0.5*(out-y)*(out-y);
+  }
+
+  function reinit(){ net=makeNet([2,8,8,1]); epoch=0; }
+  function reshuffle(){ data=gen(kind); reinit(); }
+
+  /* ── 学習＆指標 ── */
+  let lastLoss=0, lastAcc=0;
+  function trainEpoch(){
+    let loss=0, correct=0;
+    // シャッフル
+    for(let i=data.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=data[i]; data[i]=data[j]; data[j]=t; }
+    for(const p of data){ loss+=trainOne(net,[p.x/D,p.y/D],p.l); }
+    for(const p of data){ const o=forward(net,[p.x/D,p.y/D]); if(Math.sign(o)===p.l) correct++; }
+    epoch++; lastLoss=loss/data.length; lastAcc=correct/data.length;
+  }
+
+  /* ── 決定境界（低解像→拡大） ── */
+  function renderBoundary(){
+    bcv.width=gridN; bcv.height=gridN;
+    const img=bctx.createImageData(gridN,gridN), pd=img.data;
+    for(let gy=0;gy<gridN;gy++) for(let gx=0;gx<gridN;gx++){
+      const x=(gx/(gridN-1)*2-1), y=(1-gy/(gridN-1)*2);    // [-1,1]
+      const o=forward(net,[x,y]);                          // -1..1
+      const i=(gy*gridN+gx)*4;
+      // A=pink(244,114,182), B=sky(56,189,248)
+      const t=Math.max(-1,Math.min(1,o)); const aMix=(t+1)/2;
+      pd[i]  =Math.round(56 +(244-56)*aMix);
+      pd[i+1]=Math.round(189+(114-189)*aMix);
+      pd[i+2]=Math.round(248+(182-248)*aMix);
+      pd[i+3]=Math.round(70+90*Math.abs(t));
+    }
+    bctx.putImageData(img,0,0);
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const {x,y,s}=plot;
+    // 枠
+    ctx.fillStyle="#0a0d16"; ctx.fillRect(x,y,s,s);
+    // 境界（拡大描画）
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(bcv, x,y,s,s);
+    // グリッド線
+    ctx.strokeStyle="rgba(244,114,182,.08)"; ctx.lineWidth=1;
+    for(let k=0;k<=8;k++){ const gx=x+k/8*s, gy=y+k/8*s;
+      ctx.beginPath(); ctx.moveTo(gx,y); ctx.lineTo(gx,y+s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x,gy); ctx.lineTo(x+s,gy); ctx.stroke(); }
+    ctx.strokeStyle="rgba(176,190,210,.35)"; ctx.lineWidth=1.4; ctx.strokeRect(x,y,s,s);
+    // 点
+    for(const p of data){
+      const px=x+(p.x/D+1)/2*s, py=y+(1-(p.y/D+1)/2)*s;
+      ctx.beginPath(); ctx.fillStyle=p.l===1?"#f472b6":"#38bdf8";
+      ctx.arc(px,py,3.4,0,6.28); ctx.fill();
+      ctx.lineWidth=1; ctx.strokeStyle="rgba(7,8,12,.7)"; ctx.stroke();
+    }
+  }
+
+  let playing=true, running=true, fc=0;
+  function frame(){
+    if(running){
+      if(playing){ trainEpoch(); fc++; if(fc%2===0) renderBoundary(); }
+      draw();
+      statEl.textContent=epoch+" / "+Math.round(lastAcc*100)+"%";
+      stat2El.textContent="loss "+lastLoss.toFixed(3);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const lrR=root.querySelector('[data-lr]'), vlr=root.querySelector('[data-vlr]');
+  const statEl=root.querySelector('[data-stat]'), stat2El=root.querySelector('[data-stat2]');
+  const dataChips=[...root.querySelectorAll('[data-data]')];
+  const modal=root.querySelector('[data-modal]');
+  function updatePlay(){ playBtn.textContent=playing?"❚❚":"►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  lrR.addEventListener("input",()=>{ lr=+lrR.value/1000; vlr.textContent=lr.toFixed(3); });
+  dataChips.forEach(b=>b.addEventListener("click",()=>{ kind=b.dataset.data;
+    dataChips.forEach(o=>o.setAttribute("aria-current",String(o===b))); reshuffle(); renderBoundary(); playing=true; updatePlay(); }));
+  root.querySelector('[data-act="reinit"]').addEventListener("click",()=>{ reinit(); renderBoundary(); playing=true; updatePlay(); });
+  root.querySelector('[data-act="reshuffle"]').addEventListener("click",()=>{ reshuffle(); renderBoundary(); playing=true; updatePlay(); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height;
+    canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const top=Math.max(150,H*0.30), bottomPad=Math.max(150,H*0.24);
+    const s=Math.min(W-2*Math.max(28,W*0.06), H-top-bottomPad);
+    plot={ s:Math.max(160,s), x:(W-Math.max(160,s))/2, y:top };
+    renderBoundary();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window) new ResizeObserver(resize).observe(root); else addEventListener("resize",resize);
+
+  data=gen(kind); reinit(); resize(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

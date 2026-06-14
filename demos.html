@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Demo Gallery | KR works LLC</title>
-<meta name="description" content="KR works LLC のデモ一覧。倉庫AGVの安全走行、Transformer内部の可視化、市場関心度の murmuration。">
+<meta name="description" content="KR works LLC のデモ一覧。倉庫AGVの安全走行、Transformer内部、市場の murmuration、A*経路計画、ゲーム木探索、群衆避難、NN決定境界、反応拡散。公知アルゴリズムの可視化です。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -80,7 +80,7 @@
   <header class="top">
     <p class="eyebrow">// Demo Gallery</p>
     <h1>デモ一覧</h1>
-    <p>KR works が公開している可視化・シミュレーションのデモです。安全走行、AIの内部、市場の動き——それぞれ別の世界を、動かして確かめられます。</p>
+    <p>KR works が公開している可視化・シミュレーションのデモです。経路計画、ゲームAI、群衆の流れ、ニューラルネット、創発する模様——いずれも公知アルゴリズムを、動かして確かめられます。</p>
   </header>
 
   <div class="grid">
@@ -115,6 +115,86 @@
       </div>
     </a>
 
+    <a class="demo" href="astar_demo.html" style="--accent:#38bdf8;--accentG:rgba(56,189,248,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="astar"></canvas><div class="ico">A*</div></div>
+      <div class="body">
+        <div class="cat">Robotics · Pathfinding</div>
+        <h2>A*経路計画デモ</h2>
+        <p>倉庫グリッド上で A* が最短経路を探索。壁を描くと、f = g + h に従って探索の広がりと最短ルートがその場で描き直されます。AGVの兄弟です。</p>
+        <div class="meta"><span class="tag">Simulation</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="gametree_demo.html" style="--accent:#c084fc;--accentG:rgba(192,132,252,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="gt"></canvas><div class="ico">α-β</div></div>
+      <div class="body">
+        <div class="cat">Game AI · Search</div>
+        <h2>ゲーム木探索 — minimax / α-β</h2>
+        <p>ミニマックス法とアルファベータ枝刈りが、読む必要のない枝を切り落とす様子を可視化。同じ探索で指す○×にも、あなたは勝てません。</p>
+        <div class="meta"><span class="tag">Simulation</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="crowd_demo.html" style="--accent:#fb923c;--accentG:rgba(251,146,60,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="crowd"></canvas><div class="ico">群衆</div></div>
+      <div class="body">
+        <div class="cat">Safety · 演出デモ</div>
+        <h2>群衆避難 — social force</h2>
+        <p>「出口へ向かう力」と「避ける力」だけで動く歩行者モデル。出口幅を少し狭めると詰まりが生まれます。あくまで<b style="color:#fbbf24;font-weight:500">教育用</b>で、避難設計の根拠ではありません。</p>
+        <div class="meta"><span class="tag alt">演出 / 教育モデル</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="nn_boundary_demo.html" style="--accent:#f472b6;--accentG:rgba(244,114,182,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="nn"></canvas><div class="ico">NN</div></div>
+      <div class="body">
+        <div class="cat">Interpretability</div>
+        <h2>NN決定境界</h2>
+        <p>小さなニューラルネット（2-8-8-1）が誤差逆伝播で2色の点を学習し、決定境界をリアルタイム描画。円・XOR・渦巻き・二峰を切り替えられます。学習はすべてブラウザ内。</p>
+        <div class="meta"><span class="tag">Browser ML</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="reaction_demo.html" style="--accent:#4ade80;--accentG:rgba(74,222,128,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="rd"></canvas><div class="ico">R-D</div></div>
+      <div class="body">
+        <div class="cat">Emergence · アート</div>
+        <h2>反応拡散 — 自己組織化する模様</h2>
+        <p>Gray-Scott 反応拡散系。たった2つの化学種が広がり合うだけで、サンゴ・迷路・斑点がひとりでに育ちます。ドラッグで種まき。murmuration と同じ創発の系譜。</p>
+        <div class="meta"><span class="tag alt">アート / 演出</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="shibuya_demo.html" style="--accent:#e879f9;--accentG:rgba(232,121,249,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="sby"></canvas><div class="ico">渋谷</div></div>
+      <div class="body">
+        <div class="cat">Crowd · 演出デモ</div>
+        <h2>渋谷スクランブル — 群れる横断</h2>
+        <p>4つの角から一斉に行き交う歩行者を、ソーシャルフォース＋群れ(boids)で<b style="color:#fbbf24;font-weight:500">鳥の群れ</b>のように再現。信号が変わると交差点が色のストリームの川になります。murmurationの親戚。</p>
+        <div class="meta"><span class="tag alt">演出 / 教育モデル</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="dataflock_demo.html" style="--accent:#60a5fa;--accentG:rgba(96,165,250,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="dw"></canvas><div class="ico">DATA</div></div>
+      <div class="body">
+        <div class="cat">Tool · Data Art</div>
+        <h2>データの群れ — あなたのCSVを群れにする</h2>
+        <p>CSV / JSON をドロップすると、1行が一羽の鳥になって群れに。色＝分類、大きさ・速さ＝数値。<b style="color:#86efac;font-weight:500">データは送信されず</b>ブラウザ内だけで動きます。</p>
+        <div class="meta"><span class="tag">Browser-only</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="galton_demo.html" style="--accent:#fb7185;--accentG:rgba(251,113,133,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="gal"></canvas><div class="ico">&#9650;</div></div>
+      <div class="body">
+        <div class="cat">Probability · Data Art</div>
+        <h2>ゴルトンの救命艇 — Titanic 1912</h2>
+        <p>逃げ惑う乗客がゴルトンボードを落ち、救助ボートにたどり着けるか。経路はランダムな演出、救助されたかは<b style="color:#fbbf24;font-weight:500">Titanicの実データ</b>。最後に救助の男女比などのまとめも出ます。</p>
+        <div class="meta"><span class="tag alt">演出 / 実データ</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
   </div>
 
   <p class="note"><b>「市場の群れ」について：</b>市場の状態を群れの動きへ翻訳した演出であり、株価予測や当社のAI安全性技術（LogicLock）とは無関係です。動作確認用の擬似／記録データで動いています。</p>
@@ -125,7 +205,9 @@
 <script>
 /* カードの軽量プレビュー：accent色の小さなドット群（静止・低負荷） */
 (() => {
-  const accents = { agv:[0,240,255], tf:[129,140,248], mkt:[94,234,212] };
+  const accents = { agv:[0,240,255], tf:[129,140,248], mkt:[94,234,212],
+    astar:[56,189,248], gt:[192,132,252], crowd:[251,146,60], nn:[244,114,182], rd:[74,222,128], sby:[232,121,249], dw:[96,165,250], gal:[251,113,133] };
+  const counts = { mkt:70, tf:54, crowd:84, nn:60, rd:96, gt:52, astar:48, sby:84, dw:74, gal:64 };
   const canvases = [...document.querySelectorAll('canvas[data-thumb]')];
   function paint(c){
     const host = c.parentElement;                 // .thumb（安定したサイズの親から採寸）
@@ -134,19 +216,54 @@
     const dpr = Math.min(devicePixelRatio||1, 2);
     c.width = Math.round(r.width*dpr); c.height = Math.round(r.height*dpr);
     const g = c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,r.width,r.height);
-    const rgb = accents[c.dataset.thumb] || [0,240,255];
-    const n = c.dataset.thumb==='mkt'?70 : c.dataset.thumb==='tf'?54 : 40;
+    const key = c.dataset.thumb;
+    const rgb = accents[key] || [0,240,255];
+    const n = counts[key] || 40;
     for(let i=0;i<n;i++){
-      let x,y;
-      if(c.dataset.thumb==='tf'){            // 行列っぽい格子
+      let x,y,al=0.2+Math.random()*0.6;
+      if(key==='tf'){                         // 行列っぽい格子
         x=((i%9)+Math.random()*.4)/9*r.width; y=((i/9|0)+Math.random()*.4)/6*r.height;
-      } else if(c.dataset.thumb==='agv'){     // 経路っぽい横ライン
+      } else if(key==='agv'){                  // 経路っぽい横ライン
         x=Math.random()*r.width; y=(0.3+0.4*Math.random())*r.height;
-      } else {                                // 群れ
+      } else if(key==='astar'){                // 対角の経路＋散らばり
+        if(i<n*0.5){ const t=i/(n*0.5); x=t*r.width; y=(0.2+0.6*t+0.06*Math.sin(t*9))*r.height; al=0.75; }
+        else { x=Math.random()*r.width; y=Math.random()*r.height; al=0.18; }
+      } else if(key==='gt'){                   // 三角に広がる探索木
+        const row=i%6, col=(i/6|0); const rows=6;
+        y=(0.12+row/rows*0.78)*r.height;
+        const spread=(row/rows)*0.9; x=r.width*(0.5+(Math.random()-0.5)*spread);
+        al=0.3+0.5*(1-row/rows);
+      } else if(key==='crowd'){                // 左から右中央の出口へ収束
+        const t=Math.random(); x=t*r.width;
+        const cy=0.5*r.height; y=cy+(Math.random()-0.5)*(1-t*0.8)*r.height*0.9;
+        al=0.25+0.5*t;
+      } else if(key==='nn'){                   // 2クラスの塊
+        const cls=i%2; const cx=cls?0.7:0.3, cyy=cls?0.68:0.34;
+        x=(cx+(Math.random()-0.5)*0.34)*r.width; y=(cyy+(Math.random()-0.5)*0.34)*r.height;
+        al=0.55;
+      } else if(key==='rd'){                   // 反応拡散っぽい有機ノイズ
+        const cx=[(0.3),(0.66),(0.5)][i%3], cyy=[(0.4),(0.62),(0.5)][i%3];
+        const a=Math.random()*6.28, rad=Math.random()*0.32*r.width;
+        x=cx*r.width+Math.cos(a)*rad; y=cyy*r.height+Math.sin(a)*rad*0.7; al=0.25+Math.random()*0.55;
+      } else if(key==='sby'){                   // 4隅から中央へ交差するストリーム
+        const lane=i%4; const t=Math.random();
+        const ends=[[0.1,0.12,0.9,0.88],[0.9,0.12,0.1,0.88],[0.1,0.5,0.9,0.5],[0.5,0.1,0.5,0.9]][lane];
+        x=(ends[0]+(ends[2]-ends[0])*t)*r.width+(Math.random()-0.5)*6;
+        y=(ends[1]+(ends[3]-ends[1])*t)*r.height+(Math.random()-0.5)*6;
+        al=0.3+0.45*t;
+      } else if(key==='dw'){                   // データの群れ：いくつかの塊
+        const cl=[[0.32,0.42],[0.64,0.55],[0.5,0.32]][i%3];
+        const a=Math.random()*6.28, rad=Math.random()*0.18*r.width;
+        x=cl[0]*r.width+Math.cos(a)*rad; y=cl[1]*r.height+Math.sin(a)*rad*0.8; al=0.3+Math.random()*0.5;
+      } else if(key==='gal'){                   // ゴルトン：釘の三角＋下のベル
+        if(i<n*0.55){ const row=(Math.random()*6)|0; const span=(row+1); const col=(Math.random()*span)|0;
+          x=(0.5+((col-row/2)/7))*r.width; y=(0.18+row*0.08)*r.height; al=0.5; }
+        else { const g=(Math.random()-0.5); const bell=Math.exp(-g*g*6); x=(0.5+g)*r.width; y=(0.96-bell*0.34)*r.height; al=0.35+bell*0.5; }
+      } else {                                 // 群れ（mkt）
         const a=Math.random()*6.28, rad=Math.random()*r.width*0.28;
         x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7;
       }
-      g.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.2+Math.random()*0.6})`;
+      g.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${al})`;
       g.beginPath(); g.arc(x,y,1.4,0,6.28); g.fill();
     }
   }

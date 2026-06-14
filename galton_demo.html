@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ゴルトンの救命艇 — 落ちる乗客と確率 | KR works LLC</title>
+<meta name="description" content="ゴルトンボード(公知の確率教具)で乗客が落下し、救命艇に入れた人が助かる教育デモ。Titanicの実データの生存をたどります。ブラウザ内完結で、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#fb7185; --accentG:rgba(251,113,133,.5);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(251,113,133,.07) 0%, rgba(7,8,12,0) 50%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 62%,#0a1018 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:50ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(251,113,133,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.1rem,.8rem+.9vw,1.6rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.74rem;color:var(--soft);margin-top:4px;}
+  #stage .stat .pv2 b{color:#34d399;font-weight:400;} #stage .stat .pv2 i{color:#94a3b8;font-style:normal;}
+  #stage .stat .pv3{font-family:'Share Tech Mono',monospace;font-size:.68rem;color:var(--faint);margin-top:2px;}
+  @media(max-width:680px){#stage .stat .pv2,#stage .stat .pv3{display:none;}#stage .head{max-width:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(96%,940px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(251,113,133,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(251,113,133,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .field{display:flex;align-items:center;gap:8px;}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{width:104px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(251,113,133,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage select{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--ink);font-family:'Share Tech Mono',monospace;font-size:.7rem;padding:.42em 1.6em .42em .7em;border-radius:8px;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--accent) 50%),linear-gradient(135deg,var(--accent) 50%,transparent 50%);background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(251,113,133,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(251,113,133,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(251,113,133,.22);}
+  #stage .result{position:absolute;inset:0;z-index:28;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.55);backdrop-filter:blur(2px);}
+  #stage .result[open]{display:flex;}
+  #stage .rcard{max-width:470px;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:24px 26px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .rcard h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1rem;color:var(--accent);letter-spacing:.04em;margin-bottom:12px;}
+  #stage .rcard .big{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.25rem;color:#fff;margin-bottom:14px;}
+  #stage .rcard .big span{color:var(--accent);}
+  #stage .rcard ul{margin:0 0 12px;padding-left:1.1em;}
+  #stage .rcard li{font-size:.84rem;line-height:1.95;color:var(--soft);}
+  #stage .rcard li b{color:#fff;font-weight:500;}
+  #stage .rcard li .f{color:#f472b6;} #stage .rcard li .m{color:#60a5fa;}
+  #stage .rcard .rnote{font-size:.78rem;color:var(--faint);line-height:1.75;margin-bottom:14px;}
+  #stage .rcard .x{appearance:none;border:1px solid var(--accent);background:rgba(251,113,133,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .rcard .x:hover{background:rgba(251,113,133,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="ゴルトンボードを落下する乗客と救命艇の教育デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Titanic 1912 ／ 救助のドラマ</p>
+    <h1>逃げ惑う乗客たち、救助ボートにたどり着けるか</h1>
+    <p class="sub">逃げ惑う乗客たちが幾多のドラマを経て、<b>救助ボート</b>にたどり着きます。経路は<b>ランダムな演出</b>ですが、救助されたかどうかは <b>Titanic の実データ</b>（1912年の実際の事故）に基づいています。</p>
+    <span class="honest"><i class="dot"></i>教育デモ ・ 経路は演出 ・ 救助は実データ(Titanic 1912)<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">生存率</div>
+    <div class="pv" data-rate>—</div>
+    <div class="pv2">助かった <b data-saved>0</b> ・ 亡くなった <i data-lost>0</i></div>
+    <div class="pv3" data-break>—</div>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">❚❚</button>
+      <div class="field"><span class="slab">速度</span><input class="scrub" type="range" min="1" max="8" value="3" data-speed></div>
+      <div class="field"><span class="slab">救命艇の幅 <b data-vboat>5</b></span><input class="scrub" type="range" min="1" max="5" value="2" data-boat></div>
+      <div class="field"><span class="slab">色</span><select data-color><option value="sex">性別</option><option value="surv">生存</option><option value="class">客室クラス</option></select></div>
+    </div>
+    <div class="crow">
+      <span class="slab" data-progress>0 / 891</span>
+      <span class="spacer"></span>
+      <button class="chip" data-act="restart">最初から</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公知教具の演出デモ」です</h2>
+      <p><b>ゴルトンボード</b>（別名ビーンマシン）は、釘に当たって左右にランダムに散る玉が、下で山（二項分布≒正規分布）を作る古典的な確率教具です。本デモはそれを使って Titanic の救助を可視化した<b>演出</b>で、当社の LogicLock／保存則監査や予測とは<b>無関係</b>です。</p>
+      <ul>
+        <li>玉＝乗客。落ちる<b>経路はランダムな演出</b>です。</li>
+        <li><b>救助されたかどうかは実データ</b>（1912年の実在の事故、計891名・生存342名）に基づきます。</li>
+        <li>女＝ピンク／男＝青。下のバーで「<b>女性・上の客室ほど救助されやすかった</b>」という実際の偏りが見えます。</li>
+        <li>全員が落ち終わると、<b>救助された人の男女比</b>などのまとめが表示されます。</li>
+      </ul>
+      <p>実在の災害を題材にしています。亡くなった方々への敬意を込め、静かな表現にしました。すべてブラウザ内で動作し、外部通信はありません。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+
+  <div class="result" data-result>
+    <div class="rcard" role="dialog" aria-modal="true" aria-label="救助の結果">
+      <h2>救助の結果 — Titanic 1912</h2>
+      <div class="big"><span data-r-surv>342</span> / <span data-r-tot>891</span> 名が救助（<span data-r-rate>38%</span>）</div>
+      <ul data-r-list></ul>
+      <p class="rnote">「女性・子ども優先」と上級客室の優位が、数字にはっきり残っています。経路は演出ですが、これらの人数・比率はすべて実データです。</p>
+      <button class="x" data-act="again">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── 実Titanic：客室クラス×性別 の人数・生存数 ──
+  const CELLS=[
+    {pclass:1,sex:"female",n:94,surv:91},{pclass:1,sex:"male",n:122,surv:45},
+    {pclass:2,sex:"female",n:76,surv:70},{pclass:2,sex:"male",n:108,surv:17},
+    {pclass:3,sex:"female",n:144,surv:72},{pclass:3,sex:"male",n:347,surv:47},
+  ];
+  function buildPassengers(){
+    const a=[];
+    for(const c of CELLS){ for(let i=0;i<c.n;i++) a.push({sex:c.sex,pclass:c.pclass,surv:i<c.surv?1:0}); }
+    for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+
+  // 実データの集計（救助の男女比・クラス別生存率など）
+  const SUM=(()=>{ let tot=0,surv=0; const sex={female:{n:0,s:0},male:{n:0,s:0}}, cls={1:{n:0,s:0},2:{n:0,s:0},3:{n:0,s:0}};
+    for(const c of CELLS){ tot+=c.n; surv+=c.surv; sex[c.sex].n+=c.n; sex[c.sex].s+=c.surv; cls[c.pclass].n+=c.n; cls[c.pclass].s+=c.surv; }
+    return {tot,surv,sex,cls};
+  })();
+
+  let W=0,H=0,dpr=1;
+  const ROWS=12, BINS=ROWS+1, CK=ROWS/2;
+  let cx=0, pegTop=0, rowH=0, pegBot=0, waterY=0, dx=0, boardW=0, barBottom=0, shipW=0;
+  const SHIPDROP=20;   // 船底から盤口までの落下距離(px)
+  let boatR=2;           // 救命艇の半径(ビン)
+  let mode="data";       // data | prob
+  let colorMode="sex";
+  let speed=3;
+
+  let passengers=[], idx=0, beads=[], sF=[], sM=[], lF=[], lM=[], savedTot=0, lostTot=0, cat={}, splashes=[], holding=0, resultShown=false;
+
+  const SEXC={female:[244,114,182], male:[96,165,250]};
+  const CLSC={1:[250,204,21], 2:[94,234,212], 3:[251,113,133]};
+  const SURC={1:[52,211,153], 0:[148,163,184]};
+  function colorOf(p){ if(colorMode==="sex") return SEXC[p.sex]; if(colorMode==="class") return CLSC[p.pclass]; return SURC[p.surv]; }
+
+  function boatSet(){ const s=new Set(); for(let k=Math.round(CK-boatR);k<=Math.round(CK+boatR);k++) if(k>=0&&k<BINS) s.add(k); return s; }
+  function binX(k){ return cx + (k-CK)*dx; }
+
+  function chooseRights(k){ const rows=[...Array(ROWS).keys()]; for(let i=rows.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;const t=rows[i];rows[i]=rows[j];rows[j]=t;} return new Set(rows.slice(0,k)); }
+  function makeBead(p){
+    let k;
+    if(mode==="data"){
+      const bs=boatSet();
+      if(p.surv){ const arr=[...bs]; k=arr[(Math.random()*arr.length)|0]; }
+      else { const out=[]; for(let i=0;i<BINS;i++) if(!bs.has(i)) out.push(i); k= out.length? out[(Math.random()*out.length)|0] : (Math.random()*BINS)|0; }
+      // 中央寄りの自然さを少し
+      if(Math.random()<0.5){ const k2=Math.round((k+CK)/2); if(mode==="data"){ const bs2=boatSet(); if(p.surv? bs2.has(k2): !bs2.has(k2)) k=k2; } }
+    } else {
+      k=0; for(let r=0;r<ROWS;r++) if(Math.random()<0.5) k++;
+    }
+    const rr=chooseRights(k); const rowX=[cx]; let x=cx;
+    for(let r=0;r<ROWS;r++){ x += rr.has(r)? dx/2 : -dx/2; rowX.push(x); }
+    return {p, rowX, k, sx:cx+(Math.random()-0.5)*shipW*0.66, y:pegTop-SHIPDROP, col:colorOf(p), vf:0.82+Math.random()*0.36};
+  }
+
+  function reset(){
+    passengers=buildPassengers(); idx=0; beads=[]; splashes=[]; holding=0;
+    sF=new Array(BINS).fill(0); sM=new Array(BINS).fill(0); lF=new Array(BINS).fill(0); lM=new Array(BINS).fill(0);
+    savedTot=0; lostTot=0; cat={}; resultShown=false;
+    const rel=root.querySelector('[data-result]'); if(rel) rel.removeAttribute("open");
+  }
+  function recolorAll(){ for(const b of beads) b.col=colorOf(b.p); }
+
+  function land(b){
+    const k=b.k; const bs=boatSet();
+    const survived = mode==="data" ? b.p.surv : (bs.has(k)?1:0);
+    const fem = b.p.sex==="female";
+    if(survived){ (fem?sF:sM)[k]++; savedTot++; } else { (fem?lF:lM)[k]++; lostTot++; }
+    const key = colorMode==="sex"? (b.p.sex==="female"?"女性":"男性")
+              : colorMode==="class"? (b.p.pclass+"等")
+              : (survived?"助かった":"亡くなった");
+    if(!cat[key]) cat[key]={s:0,n:0}; cat[key].n++; if(survived) cat[key].s++;
+    splashes.push({x:binX(k), y:waterY, s:survived, life:1, col:b.col});
+  }
+
+  /* ── 描画 ── */
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // 水面
+    ctx.fillStyle="rgba(20,60,90,.16)"; ctx.fillRect(0,waterY,W,H-waterY);
+    ctx.strokeStyle="rgba(125,211,252,.30)"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,waterY); ctx.lineTo(W,waterY); ctx.stroke();
+    // 客船（タイタニック型）— ここから乗客が落ちてくる
+    drawShip();
+    // 釘
+    ctx.fillStyle="rgba(176,190,210,.5)";
+    for(let r=0;r<ROWS;r++){ const y=pegTop+(r+0.5)*rowH; const cnt=r+1; const x0=cx-(r*dx)/2;
+      for(let p=0;p<cnt;p++){ ctx.beginPath(); ctx.arc(x0+p*dx, y, 2.0, 0,6.28); ctx.fill(); } }
+    // ヒストグラム（助かった＝上, 亡くなった＝下／男女で積み上げ）
+    let mc=1; for(let k=0;k<BINS;k++){ mc=Math.max(mc, sF[k]+sM[k], lF[k]+lM[k]); }
+    const maxUp=waterY-pegBot-6, maxDn=barBottom-waterY-6;
+    const unit=Math.min(7, maxUp/mc, maxDn/mc);
+    const PINK="251,113,133", BLUE="96,165,250";       // 女=ピンク, 男=青
+    for(let k=0;k<BINS;k++){ const bx=binX(k), bw=dx*0.74, x0=bx-bw/2;
+      if(colorMode==="sex"){
+        // 上：女(下)→男(上)。救命艇がピンクで埋まる＝女性が多く助かった
+        let y=waterY;
+        if(sF[k]){ const hf=sF[k]*unit; ctx.fillStyle=`rgba(${PINK},.85)`; ctx.fillRect(x0,y-hf,bw,hf); y-=hf; }
+        if(sM[k]){ const hm=sM[k]*unit; ctx.fillStyle=`rgba(${BLUE},.80)`; ctx.fillRect(x0,y-hm,bw,hm); }
+        // 下：男(上)→女(下)
+        let y2=waterY;
+        if(lM[k]){ const hm=lM[k]*unit; ctx.fillStyle=`rgba(${BLUE},.40)`; ctx.fillRect(x0,y2,bw,hm); y2+=hm; }
+        if(lF[k]){ const hf=lF[k]*unit; ctx.fillStyle=`rgba(${PINK},.42)`; ctx.fillRect(x0,y2,bw,hf); }
+      } else {
+        const up=(sF[k]+sM[k])*unit, dn=(lF[k]+lM[k])*unit;
+        if(up>0){ ctx.fillStyle="rgba(52,211,153,.5)"; ctx.fillRect(x0,waterY-up,bw,up); ctx.fillStyle="rgba(52,211,153,.85)"; ctx.fillRect(x0,waterY-up,bw,2); }
+        if(dn>0){ ctx.fillStyle="rgba(100,116,139,.42)"; ctx.fillRect(x0,waterY,bw,dn); }
+      }
+    }
+    // 救命艇（棒グラフの手前＝水面に常に見えるよう最後に描く）
+    const bs=boatSet();
+    for(const k of bs){ const bx=binX(k); drawBoat(bx, waterY); }
+    // しぶき（加算・控えめ）
+    ctx.globalCompositeOperation="lighter";
+    for(const s of splashes){ const c=s.s? [52,211,153]:[148,163,184];
+      ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${0.35*s.life})`; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, (1-s.life)*14+3, 0, 6.28); ctx.stroke(); }
+    ctx.globalCompositeOperation="source-over";
+    // 落下中の乗客（明るすぎないよう、グローなし・やや透過）
+    for(const b of beads){ const c=b.col;
+      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},0.8)`;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 2.4, 0,6.28); ctx.fill(); }
+  }
+  function drawShip(){
+    const w=shipW, baseY=pegTop-2;
+    const hullH=w*0.085, deckH=w*0.058, fH=w*0.090, fW=w*0.044;
+    const hullTopY=baseY-hullH;
+    // 船体（船首=右をやや尖らせ、船底は緩いアーチ）
+    ctx.fillStyle="rgba(70,92,120,.42)"; ctx.strokeStyle="rgba(190,205,225,.45)"; ctx.lineWidth=1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx-w/2, hullTopY);
+    ctx.lineTo(cx+w*0.42, hullTopY);
+    ctx.lineTo(cx+w/2, hullTopY+hullH*0.42);
+    ctx.quadraticCurveTo(cx+w*0.26, baseY, cx-w*0.04, baseY);
+    ctx.quadraticCurveTo(cx-w*0.34, baseY, cx-w/2, hullTopY+hullH*0.5);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 喫水帯
+    ctx.strokeStyle="rgba(190,205,225,.22)"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx-w*0.46, hullTopY+hullH*0.52); ctx.lineTo(cx+w*0.44, hullTopY+hullH*0.52); ctx.stroke();
+    // デッキ（上部構造）
+    const dW=w*0.60, dTopY=hullTopY-deckH;
+    ctx.fillStyle="rgba(96,120,150,.45)"; ctx.strokeStyle="rgba(190,205,225,.4)"; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.rect(cx-dW/2, dTopY, dW, deckH); ctx.fill(); ctx.stroke();
+    // 煙突4本（タイタニック）
+    const fy=dTopY-fH, gap=dW*0.21;
+    for(let i=0;i<4;i++){ const fx=cx+(i-1.5)*gap;
+      ctx.fillStyle="rgba(120,140,170,.6)"; ctx.fillRect(fx-fW/2, fy, fW, fH+2);
+      ctx.fillStyle="rgba(251,113,133,.65)"; ctx.fillRect(fx-fW/2, fy, fW, fH*0.30);   // バフ色帯(accent)
+      ctx.fillStyle="rgba(18,22,30,.85)"; ctx.fillRect(fx-fW/2, fy, fW, fH*0.12);       // 黒トップ
+    }
+    // 舷窓
+    ctx.fillStyle="rgba(190,210,235,.28)";
+    for(let i=0;i<11;i++){ const px=cx-w*0.42+i*(w*0.84/10); ctx.beginPath(); ctx.arc(px, hullTopY+hullH*0.32, 1.3,0,6.28); ctx.fill(); }
+  }
+  function drawBoat(bx,y){
+    const w=dx*0.84, h=Math.min(15,dx*0.6);
+    ctx.save();
+    ctx.shadowColor="rgba(251,113,133,.55)"; ctx.shadowBlur=8;
+    ctx.fillStyle="rgba(251,113,133,.95)"; ctx.strokeStyle="rgba(255,216,224,.85)"; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(bx-w/2,y-h*0.25); ctx.lineTo(bx+w/2,y-h*0.25); ctx.lineTo(bx+w*0.32,y+h*0.7); ctx.lineTo(bx-w*0.32,y+h*0.7); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  function easeOutBack(t){ const s=2.2; return 1+(s+1)*Math.pow(t-1,3)+s*Math.pow(t-1,2); }
+  function beadX(b){
+    const y=b.y;
+    if(y<=pegTop){ const t=Math.max(0,Math.min(1,(y-(pegTop-SHIPDROP))/SHIPDROP)); return b.sx+(cx-b.sx)*t; }
+    if(y>=pegBot) return b.rowX[ROWS];
+    const fr=(y-pegTop)/rowH; const r=Math.min(ROWS-1, fr|0); const t=fr-r;
+    // 釘に当たって弾けるように、横移動はeaseOutBack（軽いオーバーシュート＝跳ね返り）
+    return b.rowX[r]+(b.rowX[r+1]-b.rowX[r])*easeOutBack(t);
+  }
+
+  /* ── ループ ── */
+  let playing=true, running=true, fc=0;
+  function frame(){
+    if(running){
+      if(playing){
+        fc++;
+        // 一斉に降らせる（バースト放出）。速度スライダーで降水量も調整
+        const burst=Math.max(2, speed*3);
+        for(let s=0;s<burst && idx<passengers.length && beads.length<520; s++){ beads.push(makeBead(passengers[idx++])); }
+        // パチンコ玉くらいのゆっくりした落下（行をジグザグに通る）
+        const fall=(waterY-(pegTop-22))/175*(0.55+speed*0.10);
+        for(const b of beads){ b.y+=fall*b.vf; b.x=beadX(b); }
+        // 着水
+        const keep=[]; for(const b of beads){ if(b.y>=waterY){ land(b); } else keep.push(b); } beads=keep;
+        for(const s of splashes){ s.life-=0.05; } splashes=splashes.filter(s=>s.life>0);
+        // 全員落ち切ったら救助結果のまとめを表示
+        if(idx>=passengers.length && beads.length===0 && !resultShown){ showResults(); }
+      }
+      draw(); syncUI();
+    }
+    requestAnimationFrame(frame);
+  }
+  function syncUI(){
+    const tot=savedTot+lostTot;
+    rateEl.textContent = tot? Math.round(savedTot/tot*100)+"%" : "—";
+    savedEl.textContent=savedTot.toLocaleString(); lostEl.textContent=lostTot.toLocaleString();
+    progEl.textContent=(savedTot+lostTot)+" / "+passengers.length;
+    const keys=Object.keys(cat).slice(0,3);
+    breakEl.textContent = keys.length? keys.map(k=>`${k} ${cat[k].n?Math.round(cat[k].s/cat[k].n*100):0}%`).join(" ・ ") : "—";
+  }
+
+  /* ── UI ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const speedR=root.querySelector('[data-speed]'), boatR_el=root.querySelector('[data-boat]'), vboat=root.querySelector('[data-vboat]');
+  const colorSel=root.querySelector('[data-color]');
+  const resultEl=root.querySelector('[data-result]'), rSurv=root.querySelector('[data-r-surv]'), rTot=root.querySelector('[data-r-tot]'), rRate=root.querySelector('[data-r-rate]'), rList=root.querySelector('[data-r-list]');
+  const rateEl=root.querySelector('[data-rate]'), savedEl=root.querySelector('[data-saved]'), lostEl=root.querySelector('[data-lost]'), breakEl=root.querySelector('[data-break]'), progEl=root.querySelector('[data-progress]');
+  const modal=root.querySelector('[data-modal]');
+  function updatePlay(){ playBtn.textContent=playing?"❚❚":"►"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  speedR.addEventListener("input",()=>speed=+speedR.value);
+  boatR_el.addEventListener("input",()=>{ boatR=+boatR_el.value; vboat.textContent=(boatR*2+1); });
+  colorSel.addEventListener("change",()=>{ colorMode=colorSel.value; recolorAll(); });
+  function showResults(){
+    resultShown=true; playing=false; updatePlay();
+    const sv=SUM.surv, tot=SUM.tot, f=SUM.sex.female, m=SUM.sex.male;
+    const pct=(a,b)=>Math.round(a/b*100)+"%";
+    rSurv.textContent=sv; rTot.textContent=tot; rRate.textContent=pct(sv,tot);
+    rList.innerHTML =
+      `<li>救助された人の男女比　<span class="f">女性 ${f.s}</span>（${pct(f.s,sv)}） ・ <span class="m">男性 ${m.s}</span>（${pct(m.s,sv)}）</li>`+
+      `<li>生存率　<span class="f">女性 ${pct(f.s,f.n)}</span> ・ <span class="m">男性 ${pct(m.s,m.n)}</span></li>`+
+      `<li>客室クラス別の生存率　1等 ${pct(SUM.cls[1].s,SUM.cls[1].n)} ・ 2等 ${pct(SUM.cls[2].s,SUM.cls[2].n)} ・ 3等 ${pct(SUM.cls[3].s,SUM.cls[3].n)}</li>`;
+    resultEl.setAttribute("open","");
+  }
+  function hideResults(){ resultEl.removeAttribute("open"); }
+  root.querySelector('[data-act="again"]').addEventListener("click",()=>{ hideResults(); reset(); playing=true; updatePlay(); });
+  root.querySelector('[data-act="restart"]').addEventListener("click",()=>{ reset(); playing=true; updatePlay(); });
+
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height; canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    boardW=Math.min(W*0.7, 560); cx=W/2; dx=boardW/(ROWS+1);
+    shipW=Math.min(boardW*1.15, W*0.62, 700);
+    const shipTotalH=Math.min(shipW*0.30, H*0.20);        // 船(船体+デッキ+煙突)の高さ（上限つき）
+    // 説明文(.head)の高さを測って、グラフィックはその下から開始（重なり防止）
+    const headEl=root.querySelector('.head');
+    const headBottom = headEl ? (headEl.offsetTop + headEl.offsetHeight) : H*0.30;
+    pegTop = Math.max(headBottom + shipTotalH + 22, H*0.30);
+    const bottomLimit = H - Math.max(120, H*0.19);        // 操作バーの上端の目安
+    const regionH = Math.max(170, bottomLimit - pegTop);
+    rowH = (regionH*0.50)/ROWS; pegBot = pegTop + ROWS*rowH;
+    waterY = pegBot + Math.max(24, regionH*0.10);
+    barBottom = bottomLimit;
+    reset();
+  }
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,180); }).observe(root); } else addEventListener("resize",resize);
+
+  resize(); vboat.textContent=(boatR*2+1); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
