@@ -195,6 +195,26 @@
       </div>
     </a>
 
+    <a class="demo" href="fundflow_demo.html" style="--accent:#facc15;--accentG:rgba(250,204,21,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="ff"></canvas><div class="ico">資金</div></div>
+      <div class="body">
+        <div class="cat">Public Data · Data Art</div>
+        <h2>資金の渡り鳥 — 部門間の資金過不足</h2>
+        <p>家計・企業・政府・金融・海外の「お金の余り（黒字）と不足（赤字）」を群れの大きさに見立て、年を動かすと群れが部門間を渡ります。動きは<b style="color:#fbbf24;font-weight:500">演出</b>、金額は<b style="color:#fbbf24;font-weight:500">公的統計の概形</b>です。</p>
+        <div class="meta"><span class="tag alt">演出 / 参考データ</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="moneystock_demo.html" style="--accent:#2dd4bf;--accentG:rgba(45,212,191,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="ms"></canvas><div class="ico">M3</div></div>
+      <div class="body">
+        <div class="cat">Public Data · Data Art</div>
+        <h2>育つ群れ — マネーストックの量と中身</h2>
+        <p>世の中のお金の総量を群れの大きさに、中身（現金・預金・定期・投信など）を色に見立てて、数十年かけて育つ様子を可視化。動きは<b style="color:#fbbf24;font-weight:500">演出</b>、金額は<b style="color:#fbbf24;font-weight:500">公的統計の概形</b>です。</p>
+        <div class="meta"><span class="tag alt">演出 / 参考データ</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
   </div>
 
   <p class="note"><b>「市場の群れ」について：</b>市場の状態を群れの動きへ翻訳した演出であり、株価予測や当社のAI安全性技術（LogicLock）とは無関係です。動作確認用の擬似／記録データで動いています。</p>
@@ -206,8 +226,8 @@
 /* カードの軽量プレビュー：accent色の小さなドット群（静止・低負荷） */
 (() => {
   const accents = { agv:[0,240,255], tf:[129,140,248], mkt:[94,234,212],
-    astar:[56,189,248], gt:[192,132,252], crowd:[251,146,60], nn:[244,114,182], rd:[74,222,128], sby:[232,121,249], dw:[96,165,250], gal:[251,113,133] };
-  const counts = { mkt:70, tf:54, crowd:84, nn:60, rd:96, gt:52, astar:48, sby:84, dw:74, gal:64 };
+    astar:[56,189,248], gt:[192,132,252], crowd:[251,146,60], nn:[244,114,182], rd:[74,222,128], sby:[232,121,249], dw:[96,165,250], gal:[251,113,133], ff:[250,204,21], ms:[45,212,191] };
+  const counts = { mkt:70, tf:54, crowd:84, nn:60, rd:96, gt:52, astar:48, sby:84, dw:74, gal:64, ff:75, ms:96 };
   const canvases = [...document.querySelectorAll('canvas[data-thumb]')];
   function paint(c){
     const host = c.parentElement;                 // .thumb（安定したサイズの親から採寸）
@@ -259,6 +279,13 @@
         if(i<n*0.55){ const row=(Math.random()*6)|0; const span=(row+1); const col=(Math.random()*span)|0;
           x=(0.5+((col-row/2)/7))*r.width; y=(0.18+row*0.08)*r.height; al=0.5; }
         else { const g=(Math.random()-0.5); const bell=Math.exp(-g*g*6); x=(0.5+g)*r.width; y=(0.96-bell*0.34)*r.height; al=0.35+bell*0.5; }
+      } else if(key==='ff'){                   // 資金の渡り鳥：5つの部門クラスタ
+        const z=i%5; const zx=(0.12+z*0.19)*r.width; const zy=(0.5+(z%2?0.18:-0.18))*r.height;
+        const a=Math.random()*6.28, rad=Math.random()*0.07*r.width;
+        x=zx+Math.cos(a)*rad; y=zy+Math.sin(a)*rad; al=0.3+Math.random()*0.5;
+      } else if(key==='ms'){                    // 育つ群れ：中心に寄った大きな群れ
+        const a=Math.random()*6.28, rad=Math.pow(Math.random(),0.7)*r.width*0.32;
+        x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.52+Math.sin(a)*rad*0.72; al=0.25+Math.random()*0.55;
       } else {                                 // 群れ（mkt）
         const a=Math.random()*6.28, rad=Math.random()*r.width*0.28;
         x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7;

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>資金の渡り鳥 — 部門間の資金過不足 | KR works LLC</title>
+<meta name="description" content="家計・企業・政府・金融・海外の各部門の「資金の余り／不足」を、群れ(boids)の渡りとして可視化した教育・演出デモ。公知アルゴリズムのみ、ブラウザ内完結で、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#facc15; --accentG:rgba(250,204,21,.45);
+    --surplus:#facc15; --deficit:#fb7185;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(250,204,21,.06) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#07080e 0%,#090b14 60%,#0b0e18 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:54ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(250,204,21,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.4rem,1rem+1.6vw,2.4rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);margin-top:4px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,196px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;max-width:62ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:50%;flex:none;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(95%,940px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(250,204,21,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(250,204,21,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .field{display:flex;align-items:center;gap:8px;flex:1;min-width:200px;}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(250,204,21,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(250,204,21,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(250,204,21,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(250,204,21,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="各部門の資金の余り・不足を、群れの渡りとして可視化した教育・演出デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Flow of Funds ／ 資金の渡り鳥</p>
+    <h1>お金は、どこに余り、どこで足りないか</h1>
+    <p class="sub">家計・企業・政府・金融・海外の各部門の<b>資金の余り（黒字）と不足（赤字）</b>を、群れの大きさに見立てました。年を動かすと、群れが部門の間を<b>渡り鳥のように移動</b>します。たとえば不況や危機の年には、政府に<b>赤い群れ</b>が一気に集まります。</p>
+    <span class="honest"><i class="dot"></i>演出（鳥の動き）＋参考データ（資金過不足の概形）・予測でも分析でもありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">Year</div>
+    <div class="pv" data-year>—</div>
+    <div class="pv2" data-note>黒字＝お金が余る／赤字＝お金が足りない</div>
+  </div>
+
+  <div class="legend" data-legend aria-hidden="true">
+    <span><i style="background:var(--surplus)"></i>黒字（資金余剰）</span>
+    <span><i style="background:var(--deficit)"></i>赤字（資金不足）</span>
+    <span style="color:var(--faint)">群れの大きさ＝金額の大きさ</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">&#10074;&#10074;</button>
+      <div class="field"><span class="slab">年 <b data-vyear>—</b></span><input class="scrub" type="range" data-year-range min="0" max="1" value="0"></div>
+      <button class="chip" data-act="restart">最初の年へ</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公的統計の演出的な可視化」です</h2>
+      <p>各部門が一定期間に<b>お金を貸し出せたか（資金余剰・黒字）／借りる側だったか（資金不足・赤字）</b>を「資金過不足」と呼びます。一般に家計は黒字、政府は赤字になりがちで、危機の年にはその差が大きくなります。</p>
+      <ul>
+        <li>群れの<b>大きさ</b>は、その年・その部門の金額の<b>大きさ</b>に対応します。</li>
+        <li>色は<b style="color:#facc15">黒字＝金色</b>／<b style="color:#fb7185">赤字＝赤</b>。年を動かすと群れが部門間を移動します。</li>
+        <li>鳥の<b>位置や動きは演出</b>（公知の群れモデル boids）で、実際の資金の流れの経路ではありません。</li>
+        <li>金額は<b>概形（参考値）</b>です。出典：日本銀行「資金循環統計」の傾向を参考に作成。実データCSVに差し替え可能。</li>
+      </ul>
+      <p>本デモは<b>教育・演出目的</b>で、当社の LogicLock／保存則監査や、何かの予測・分析とは<b>無関係</b>です。すべてブラウザ内で動作し、外部送信はありません。</p>
+      <p style="text-align:right;margin:0"><button class="x" data-act="close">閉じる</button></p>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(function(){
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+
+  /* ── データ（概形・参考値／出典：日本銀行「資金循環統計」の傾向を参考に作成） ──
+     各部門の資金過不足（兆円, +は黒字＝資金余剰, −は赤字＝資金不足）。アンカー年を線形補間して年次化。 */
+  const SECTORS=[
+    {name:"家計"},{name:"民間企業"},{name:"一般政府"},{name:"金融機関"},{name:"海外"}
+  ];
+  const ANCHORS=[
+    {y:2001, v:[ 25, -5, -28,  6,  -8]},
+    {y:2008, v:[ 18, 18, -10,  4, -22]},
+    {y:2013, v:[ 12, 22, -34,  8, -18]},
+    {y:2019, v:[ 15, 18, -13,  6, -20]},
+    {y:2020, v:[ 38, 12, -68, 10,  -8]},
+    {y:2024, v:[ 20, 25, -30,  7, -18]}
+  ];
+  const Y0=ANCHORS[0].y, Y1=ANCHORS[ANCHORS.length-1].y, NY=Y1-Y0+1;
+  function valsAt(year){
+    let a=ANCHORS[0], b=ANCHORS[ANCHORS.length-1];
+    for(let i=0;i<ANCHORS.length-1;i++){ if(year>=ANCHORS[i].y && year<=ANCHORS[i+1].y){ a=ANCHORS[i]; b=ANCHORS[i+1]; break; } }
+    const t=(b.y===a.y)?0:(year-a.y)/(b.y-a.y);
+    return a.v.map((va,i)=>va+(b.v[i]-va)*t);
+  }
+
+  /* ── 群れ ── */
+  const N=300;
+  let W=0,H=0,dpr=1, zones=[], birds=[], year=Y0, curVals=[], targetCount=[], zoneColor=[];
+  const SUR=[250,204,21], DEF=[251,113,133];
+
+  let rCap=52;
+  function layoutZones(){
+    // 説明文(.head)の下端と、下部(凡例・操作バー)の予約域から、群れの帯を決める
+    const headEl=root.querySelector('.head');
+    const headBottom=headEl?(headEl.offsetTop+headEl.offsetHeight):H*0.36;
+    const reserveBot=Math.max(160,H*0.21);
+    const avTop=headBottom+8, avBot=H-reserveBot;
+    const avail=Math.max(40, avBot-avTop);
+    rCap=Math.max(16, Math.min(52, avail/2 - 24));   // 帯に収まる群れの輪の上限
+    const centerMin=avTop + rCap + 22;               // 名前ラベルがヘッダを避ける高さ
+    const centerMax=avBot - rCap;                    // 群れ下端が予約域を避ける高さ
+    let cyMid, ampY;
+    if(centerMax>=centerMin){ cyMid=(centerMin+centerMax)/2; ampY=(centerMax-centerMin)/2; }
+    else { cyMid=centerMin; ampY=0; }                // 余白不足時はヘッダ回避を優先（下は操作パネルの裏へ）
+    const n=SECTORS.length, mx=Math.max(70,W*0.10);
+    zones=SECTORS.map((s,i)=>{
+      const fx=n>1? i/(n-1):0.5;
+      const x=mx+(W-2*mx)*fx;
+      const y=cyMid + (i%2?ampY:-ampY);
+      return {name:s.name, x, y};
+    });
+  }
+  function setYear(yr){
+    year=Math.max(Y0,Math.min(Y1,Math.round(yr)));
+    curVals=valsAt(year);
+    const abs=curVals.map(v=>Math.abs(v)); const tot=abs.reduce((a,b)=>a+b,0)||1;
+    targetCount=abs.map(v=>Math.round(N*v/tot));
+    let diff=N-targetCount.reduce((a,b)=>a+b,0);
+    for(let k=0; diff!==0; k=(k+1)%targetCount.length){ const s=Math.sign(diff); targetCount[k]+=s; diff-=s; }
+    zoneColor=curVals.map(v=> v>=0?SUR:DEF);
+    assignHomes();
+    const yEl=root.querySelector('[data-year]'); if(yEl) yEl.textContent=year;
+    const vy=root.querySelector('[data-vyear]'); if(vy) vy.textContent=year;
+    const rng=root.querySelector('[data-year-range]'); if(rng && +rng.value!==year-Y0) rng.value=year-Y0;
+  }
+  function assignHomes(){
+    const cur=new Array(zones.length).fill(0);
+    birds.forEach(b=>cur[b.home]++);
+    // 不足ゾーンのリスト
+    const need=[];
+    for(let z=0;z<zones.length;z++){ for(let k=cur[z]; k<targetCount[z]; k++) need.push(z); }
+    let ni=0;
+    for(const b of birds){
+      if(cur[b.home]>targetCount[b.home] && ni<need.length){
+        cur[b.home]--; b.home=need[ni++]; cur[b.home]++;
+      }
+    }
+  }
+  function initBirds(){
+    birds=[];
+    for(let i=0;i<N;i++){
+      const z=(Math.random()*zones.length)|0;
+      birds.push({x:Math.random()*W, y:Math.random()*H, vx:0, vy:0, home:z, ph:Math.random()*6.28});
+    }
+  }
+
+  /* ── 描画＆物理 ── */
+  let playing=true, running=true, acc=0, frameYearAcc=0;
+  function step(){
+    frameYearAcc+=1;
+    // 自動再生：約90フレーム(≈1.5秒)で1年進める
+    if(playing && frameYearAcc>=90){ frameYearAcc=0; setYear(year>=Y1? Y0 : year+1); }
+    for(const b of birds){
+      const z=zones[b.home];
+      let ax=(z.x-b.x)*0.0016, ay=(z.y-b.y)*0.0016;
+      b.ph+=0.05;
+      ax+=Math.cos(b.ph)*0.05; ay+=Math.sin(b.ph*0.9)*0.05;
+      b.vx=(b.vx+ax)*0.95; b.vy=(b.vy+ay)*0.95;
+      const sp=Math.hypot(b.vx,b.vy), mx=2.6; if(sp>mx){ b.vx*=mx/sp; b.vy*=mx/sp; }
+      b.x+=b.vx; b.y+=b.vy;
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // ゾーンのハロー＋ラベル
+    for(let z=0;z<zones.length;z++){
+      const Z=zones[z], col=zoneColor[z]||SUR, r=Math.min(rCap, 16+Math.sqrt(targetCount[z])*4.5);
+      const g=ctx.createRadialGradient(Z.x,Z.y,2,Z.x,Z.y,r);
+      g.addColorStop(0,`rgba(${col[0]},${col[1]},${col[2]},.12)`); g.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(Z.x,Z.y,r,0,6.2832); ctx.fill();
+      ctx.fillStyle="rgba(224,230,239,.9)"; ctx.font="600 13px 'M PLUS 1',sans-serif"; ctx.textAlign="center";
+      ctx.fillText(Z.name, Z.x, Z.y - r - 8);
+      const v=curVals[z]||0, sign=v>=0?"+":"−";
+      ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},.95)`; ctx.font="500 12px 'Share Tech Mono',monospace";
+      ctx.fillText(`${sign}${Math.abs(v).toFixed(0)} 兆円`, Z.x, Z.y - r + 8);
+    }
+    // 鳥
+    for(const b of birds){
+      const c=zoneColor[b.home]||SUR;
+      const sp=Math.hypot(b.vx,b.vy), al=0.45+Math.min(0.45,sp*0.18);
+      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${al})`;
+      ctx.beginPath(); ctx.arc(b.x,b.y,2.3,0,6.2832); ctx.fill();
+    }
+  }
+
+  function frame(){
+    if(running){ step(); draw(); }
+    requestAnimationFrame(frame);
+  }
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height; canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    layoutZones();
+    if(!birds.length) initBirds();
+  }
+
+  /* ── 操作 ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  function updatePlay(){ playBtn.textContent=playing?"\u275A\u275A":"\u25B6"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  const rng=root.querySelector('[data-year-range]');
+  rng.max=NY-1;
+  rng.addEventListener("input",()=>{ playing=false; updatePlay(); setYear(Y0+ +rng.value); });
+  root.querySelector('[data-act="restart"]').addEventListener("click",()=>{ setYear(Y0); });
+  const modal=root.querySelector('[data-modal]');
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion:reduce)").matches){ playing=false; }
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(()=>{resize();layoutZones();},180); }).observe(root); } else addEventListener("resize",resize);
+
+  resize(); setYear(Y0); updatePlay(); requestAnimationFrame(frame);
+
+  /* ── 画像保存／録画ツール（ブラウザ内のみ・送信なし・公知のCanvas/MediaRecorder API） ── */
+  (function(){
+    const ctrl=root.querySelector('.ctrl'); if(!ctrl||!canvas) return;
+    const css=getComputedStyle(root);
+    const accent=(css.getPropertyValue('--accent')||'#facc15').trim();
+    const bg=(css.getPropertyValue('--bg')||'#07080c').trim();
+    const NAME='fundflow';
+    const rows=ctrl.querySelectorAll('.crow'); const bar=rows[rows.length-1]||ctrl;
+    const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());};
+    function dl(blob,ext){const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='krworks_'+NAME+'_'+stamp()+'.'+ext;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+    function savePNG(){
+      const w=canvas.width,h=canvas.height,o=document.createElement('canvas');o.width=w;o.height=h;
+      const g=o.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(canvas,0,0);
+      const dp=Math.min(devicePixelRatio||1,2);
+      g.textAlign='right';g.textBaseline='bottom';
+      g.font='700 '+(15*dp)+'px "Share Tech Mono",monospace';g.fillStyle=accent;g.globalAlpha=.92;
+      g.fillText('KR works',w-13*dp,h-28*dp);
+      g.font='600 '+(12*dp)+'px "Share Tech Mono",monospace';g.fillStyle='rgba(255,255,255,.34)';g.globalAlpha=1;
+      g.fillText('krworks.co.jp',w-13*dp,h-11*dp);
+      o.toBlob(b=>{if(b)dl(b,'png');},'image/png');
+    }
+    let rec=null,chunks=[],recBtn=null,timer=0;
+    const canRec=!!(canvas.captureStream&&window.MediaRecorder&&
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')||MediaRecorder.isTypeSupported('video/webm')));
+    function endRec(){recBtn.textContent='\u25CF \u9332\u753B';recBtn.style.color='';recBtn.style.borderColor='';rec=null;clearTimeout(timer);}
+    function toggleRec(){
+      if(rec){if(rec.state==='recording')rec.stop();return;}
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      let st;try{st=canvas.captureStream(30);}catch(e){return;}
+      chunks=[];rec=new MediaRecorder(st,{mimeType:type,videoBitsPerSecond:6000000});
+      rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=()=>{if(chunks.length)dl(new Blob(chunks,{type}),'webm');endRec();};
+      rec.start();recBtn.textContent='\u25A0 \u505C\u6B62';recBtn.style.color=accent;recBtn.style.borderColor=accent;
+      timer=setTimeout(()=>{if(rec&&rec.state==='recording')rec.stop();},5000);
+    }
+    const pngBtn=document.createElement('button');pngBtn.className='chip';pngBtn.type='button';
+    pngBtn.textContent='\u753B\u50CF\u4FDD\u5B58';pngBtn.addEventListener('click',savePNG);bar.appendChild(pngBtn);
+    if(canRec){recBtn=document.createElement('button');recBtn.className='chip';recBtn.type='button';
+      recBtn.textContent='\u25CF \u9332\u753B';recBtn.addEventListener('click',toggleRec);bar.appendChild(recBtn);}
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>育つ群れ — マネーストックの量と中身 | KR works LLC</title>
+<meta name="description" content="世の中のお金の総量（マネーストック）とその中身を、数十年かけて育つ群れ(boids)として可視化した教育・演出デモ。公知アルゴリズムのみ、ブラウザ内完結で、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#2dd4bf; --accentG:rgba(45,212,191,.45);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(45,212,191,.06) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#07080e 0%,#090b14 60%,#0b0e18 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:54ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(45,212,191,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.4rem,1rem+1.6vw,2.4rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--soft);margin-top:4px;}
+  @media(max-width:680px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(150px,22vw,196px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 16px;max-width:64ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #stage .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #stage .legend i{width:11px;height:11px;border-radius:50%;flex:none;}
+  #stage .legend b{color:#fff;font-weight:500;font-family:'Share Tech Mono',monospace;}
+  @media(max-width:680px){#stage .legend{display:none;}}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(95%,940px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--accent);background:rgba(45,212,191,.12);color:var(--accent);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #stage .play:hover{background:rgba(45,212,191,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .field{display:flex;align-items:center;gap:8px;flex:1;min-width:200px;}
+  #stage .slab{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #stage .slab b{color:var(--accent);font-weight:400;}
+  #stage .scrub{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(45,212,191,.22);outline:none;cursor:pointer;}
+  #stage .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;box-shadow:0 0 10px var(--accentG);}
+  #stage .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid #07080c;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(45,212,191,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:600px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(45,212,191,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(45,212,191,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <canvas aria-label="マネーストックの総量と内訳を、育つ群れとして可視化した教育・演出デモ。"></canvas>
+
+  <header class="head">
+    <p class="ey">Money Stock ／ 育つ群れ</p>
+    <h1>世の中のお金は、増え、中身が入れ替わる</h1>
+    <p class="sub">世の中に出回るお金の総量（マネーストック）を<b>群れの大きさ</b>に、その<b>中身（現金・預金・定期・投信など）</b>を<b>色</b>に見立てました。年を動かすと、群れが<b>数十年かけて育ち</b>、コロナ期の急増や預金の比率の高まりが見えてきます。</p>
+    <span class="honest"><i class="dot"></i>演出（群れ）＋参考データ（構成の概形）・予測でも通貨量の分析でもありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">広義流動性（概形）</div>
+    <div class="pv" data-total>—</div>
+    <div class="pv2" data-year>—</div>
+  </div>
+
+  <div class="legend" data-legend aria-hidden="true"></div>
+
+  <div class="ctrl" role="group" aria-label="操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">&#10074;&#10074;</button>
+      <div class="field"><span class="slab">年 <b data-vyear>—</b></span><input class="scrub" type="range" data-year-range min="0" max="1" value="0"></div>
+      <button class="chip" data-act="restart">最初の年へ</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「公的統計の演出的な可視化」です</h2>
+      <p><b>マネーストック</b>は、世の中（家計や企業など）が持っているお金の総量です。範囲の広さに応じて M1・M2・M3・広義流動性という指標があり、現金や預金から、定期預金・投資信託・国債などへと中身が広がっていきます。</p>
+      <ul>
+        <li>群れの<b>羽数</b>は、その年のお金の総量（広義流動性の概形）に対応します。年を進めると群れが育ちます。</li>
+        <li>鳥の<b>色</b>は中身（現金通貨／預金通貨／準通貨／CD／投資信託／国債・外債等）。比率が変わると色の混ざり方が変わります。</li>
+        <li>鳥の<b>動きは演出</b>（公知の群れモデル boids）で、お金の移動経路ではありません。</li>
+        <li>金額は<b>概形（参考値）</b>です。出典：日本銀行「マネーストック統計」の傾向を参考に作成。実データCSVに差し替え可能。</li>
+      </ul>
+      <p>本デモは<b>教育・演出目的</b>で、当社の LogicLock／保存則監査や、何かの予測・分析とは<b>無関係</b>です。すべてブラウザ内で動作し、外部送信はありません。</p>
+      <p style="text-align:right;margin:0"><button class="x" data-act="close">閉じる</button></p>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(function(){
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+
+  /* ── データ（概形・参考値／出典：日本銀行「マネーストック統計」の傾向を参考に作成） ──
+     各構成要素の残高（兆円）。アンカー年を線形補間して年次化。広義流動性＝各要素の合計に相当。 */
+  const COMP=[
+    {name:"現金通貨", c:[253,224,71]},
+    {name:"預金通貨", c:[52,211,153]},
+    {name:"準通貨",   c:[96,165,250]},
+    {name:"CD",       c:[167,139,250]},
+    {name:"投資信託", c:[244,114,182]},
+    {name:"国債・外債等", c:[251,146,60]}
+  ];
+  const ANCHORS=[
+    {y:2003, v:[ 70, 300, 580, 34,  55, 360]},
+    {y:2008, v:[ 75, 360, 600, 33,  60, 380]},
+    {y:2013, v:[ 85, 480, 590, 32,  75, 430]},
+    {y:2019, v:[105, 700, 600, 33,  95, 470]},
+    {y:2020, v:[115, 800, 605, 33, 100, 480]},
+    {y:2024, v:[125, 900, 600, 34, 120, 520]}
+  ];
+  const Y0=ANCHORS[0].y, Y1=ANCHORS[ANCHORS.length-1].y, NY=Y1-Y0+1;
+  function valsAt(year){
+    let a=ANCHORS[0], b=ANCHORS[ANCHORS.length-1];
+    for(let i=0;i<ANCHORS.length-1;i++){ if(year>=ANCHORS[i].y && year<=ANCHORS[i+1].y){ a=ANCHORS[i]; b=ANCHORS[i+1]; break; } }
+    const t=(b.y===a.y)?0:(year-a.y)/(b.y-a.y);
+    return a.v.map((va,i)=>va+(b.v[i]-va)*t);
+  }
+  const TOTAL_MAX=ANCHORS[ANCHORS.length-1].v.reduce((a,b)=>a+b,0);
+
+  /* ── 群れ ── */
+  const NMAX=520;
+  let W=0,H=0,dpr=1, birds=[], year=Y0, curVals=[], curTotal=0, compCount=[], cx=0, cy=0, wanderPh=0;
+
+  function initBirds(){
+    birds=[];
+    for(let i=0;i<NMAX;i++){
+      const a=Math.random()*6.2832, r=Math.random()*Math.min(W,H)*0.25;
+      birds.push({x:W/2+Math.cos(a)*r, y:H/2+Math.sin(a)*r, vx:0, vy:0, comp:0, on:false, life:0, ph:Math.random()*6.28});
+    }
+  }
+  function setYear(yr){
+    year=Math.max(Y0,Math.min(Y1,Math.round(yr)));
+    curVals=valsAt(year);
+    curTotal=curVals.reduce((a,b)=>a+b,0);
+    const activeN=Math.round(NMAX*curTotal/TOTAL_MAX);
+    // 構成比から各色の目標羽数
+    compCount=curVals.map(v=>Math.round(activeN*v/curTotal));
+    let diff=activeN-compCount.reduce((a,b)=>a+b,0);
+    for(let k=0; diff!==0; k=(k+1)%compCount.length){ const s=Math.sign(diff); compCount[k]+=s; diff-=s; }
+    // 各鳥に色と on/off を割当て
+    let idx=0;
+    for(let ci=0;ci<COMP.length;ci++){ for(let k=0;k<compCount[ci];k++){ const b=birds[idx++]; b.comp=ci; b.on=true; } }
+    for(;idx<NMAX;idx++){ birds[idx].on=false; }
+    // 表示更新
+    const tEl=root.querySelector('[data-total]'); if(tEl) tEl.textContent=Math.round(curTotal).toLocaleString()+" 兆円";
+    const yEl=root.querySelector('[data-year]'); if(yEl) yEl.textContent=year+" 年";
+    const vy=root.querySelector('[data-vyear]'); if(vy) vy.textContent=year;
+    const rng=root.querySelector('[data-year-range]'); if(rng && +rng.value!==year-Y0) rng.value=year-Y0;
+    buildLegend();
+  }
+  function buildLegend(){
+    const el=root.querySelector('[data-legend]'); if(!el) return;
+    el.innerHTML=COMP.map((c,i)=>{
+      const pct=curTotal? (curVals[i]/curTotal*100):0;
+      return `<span><i style="background:rgb(${c.c[0]},${c.c[1]},${c.c[2]})"></i>${c.name} <b>${pct.toFixed(0)}%</b></span>`;
+    }).join("");
+  }
+
+  /* ── 物理＆描画（ゆるやかな murmuration） ── */
+  let playing=true, running=true, frameYearAcc=0;
+  function step(){
+    frameYearAcc+=1;
+    if(playing && frameYearAcc>=100){ frameYearAcc=0; setYear(year>=Y1? Y0 : year+1); }
+    wanderPh+=0.008;
+    cx=W/2+Math.cos(wanderPh)*W*0.10; cy=H*0.52+Math.sin(wanderPh*1.3)*H*0.10;
+    for(const b of birds){
+      if(!b.on){ if(b.life>0) b.life-=0.04; continue; }
+      if(b.life<1) b.life=Math.min(1,b.life+0.04);
+      let ax=(cx-b.x)*0.0010, ay=(cy-b.y)*0.0010;
+      b.ph+=0.045;
+      ax+=Math.cos(b.ph)*0.06; ay+=Math.sin(b.ph*1.1)*0.06;
+      b.vx=(b.vx+ax)*0.94; b.vy=(b.vy+ay)*0.94;
+      const sp=Math.hypot(b.vx,b.vy), mx=2.4; if(sp>mx){ b.vx*=mx/sp; b.vy*=mx/sp; }
+      b.x+=b.vx; b.y+=b.vy;
+      // 画面外に出たら中心付近へ戻す
+      if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){ b.x=cx+(Math.random()-0.5)*40; b.y=cy+(Math.random()-0.5)*40; b.vx=b.vy=0; }
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const S=1.5;                 // 群れを1.5倍に拡大表示（重心基準・物理は安定のまま）
+    let mx=0,my=0,n=0;
+    for(const b of birds){ if(b.life>0){ mx+=b.x; my+=b.y; n++; } }
+    if(n){ mx/=n; my/=n; }
+    for(const b of birds){
+      if(b.life<=0) continue;
+      const c=COMP[b.comp].c;
+      const px=mx+(b.x-mx)*S, py=my+(b.y-my)*S;
+      ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${0.7*b.life})`;
+      ctx.beginPath(); ctx.arc(px,py,2.3,0,6.2832); ctx.fill();
+    }
+  }
+  function frame(){
+    if(running){ step(); draw(); }
+    requestAnimationFrame(frame);
+  }
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height; canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(!birds.length) initBirds();
+    cx=W/2; cy=H*0.52;
+  }
+
+  /* ── 操作 ── */
+  const playBtn=root.querySelector('[data-act="play"]');
+  function updatePlay(){ playBtn.textContent=playing?"\u275A\u275A":"\u25B6"; }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  const rng=root.querySelector('[data-year-range]');
+  rng.max=NY-1;
+  rng.addEventListener("input",()=>{ playing=false; updatePlay(); setYear(Y0+ +rng.value); });
+  root.querySelector('[data-act="restart"]').addEventListener("click",()=>{ setYear(Y0); });
+  const modal=root.querySelector('[data-modal]');
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion:reduce)").matches){ playing=false; }
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,180); }).observe(root); } else addEventListener("resize",resize);
+
+  resize(); setYear(Y0); updatePlay(); requestAnimationFrame(frame);
+
+  /* ── 画像保存／録画ツール（ブラウザ内のみ・送信なし・公知のCanvas/MediaRecorder API） ── */
+  (function(){
+    const ctrl=root.querySelector('.ctrl'); if(!ctrl||!canvas) return;
+    const css=getComputedStyle(root);
+    const accent=(css.getPropertyValue('--accent')||'#2dd4bf').trim();
+    const bg=(css.getPropertyValue('--bg')||'#07080c').trim();
+    const NAME='moneystock';
+    const rows=ctrl.querySelectorAll('.crow'); const bar=rows[rows.length-1]||ctrl;
+    const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());};
+    function dl(blob,ext){const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='krworks_'+NAME+'_'+stamp()+'.'+ext;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+    function savePNG(){
+      const w=canvas.width,h=canvas.height,o=document.createElement('canvas');o.width=w;o.height=h;
+      const g=o.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(canvas,0,0);
+      const dp=Math.min(devicePixelRatio||1,2);
+      g.textAlign='right';g.textBaseline='bottom';
+      g.font='700 '+(15*dp)+'px "Share Tech Mono",monospace';g.fillStyle=accent;g.globalAlpha=.92;
+      g.fillText('KR works',w-13*dp,h-28*dp);
+      g.font='600 '+(12*dp)+'px "Share Tech Mono",monospace';g.fillStyle='rgba(255,255,255,.34)';g.globalAlpha=1;
+      g.fillText('krworks.co.jp',w-13*dp,h-11*dp);
+      o.toBlob(b=>{if(b)dl(b,'png');},'image/png');
+    }
+    let rec=null,chunks=[],recBtn=null,timer=0;
+    const canRec=!!(canvas.captureStream&&window.MediaRecorder&&
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')||MediaRecorder.isTypeSupported('video/webm')));
+    function endRec(){recBtn.textContent='\u25CF \u9332\u753B';recBtn.style.color='';recBtn.style.borderColor='';rec=null;clearTimeout(timer);}
+    function toggleRec(){
+      if(rec){if(rec.state==='recording')rec.stop();return;}
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      let st;try{st=canvas.captureStream(30);}catch(e){return;}
+      chunks=[];rec=new MediaRecorder(st,{mimeType:type,videoBitsPerSecond:6000000});
+      rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=()=>{if(chunks.length)dl(new Blob(chunks,{type}),'webm');endRec();};
+      rec.start();recBtn.textContent='\u25A0 \u505C\u6B62';recBtn.style.color=accent;recBtn.style.borderColor=accent;
+      timer=setTimeout(()=>{if(rec&&rec.state==='recording')rec.stop();},5000);
+    }
+    const pngBtn=document.createElement('button');pngBtn.className='chip';pngBtn.type='button';
+    pngBtn.textContent='\u753B\u50CF\u4FDD\u5B58';pngBtn.addEventListener('click',savePNG);bar.appendChild(pngBtn);
+    if(canRec){recBtn=document.createElement('button');recBtn.className='chip';recBtn.type='button';
+      recBtn.textContent='\u25CF \u9332\u753B';recBtn.addEventListener('click',toggleRec);bar.appendChild(recBtn);}
+  })();
+})();
+</script>
+</body>
+</html>
