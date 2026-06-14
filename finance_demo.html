@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>市場の群れ — 市場関心度の murmuration | KR works LLC</title>
+<meta name="description" content="日経225をムクドリの群れ（murmuration）に見立てた演出的可視化。擬似／記録データで動作し、LogicLock・保存則・予測とは無関係です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  /* ── 統一ナビ＋HOME（全デモ共通パターン） ── */
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  /* ── ステージ ── */
+  #mkt{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      linear-gradient(0deg,transparent 95%,rgba(0,240,255,.04) 95%),
+      linear-gradient(90deg,transparent 95%,rgba(0,240,255,.04) 95%),
+      radial-gradient(130% 90% at 50% -10%, rgba(0,240,255,.08) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#080a12 0%,#0a0d16 60%,#0c0f1a 100%);
+    background-size:60px 60px,60px 60px,auto,auto;}
+  #mkt canvas{position:absolute;inset:0;display:block;width:100%;height:100%;}
+
+  #mkt .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:52ch;}
+  #mkt .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.34em;text-transform:uppercase;color:var(--cyan);opacity:.85;margin-bottom:.6em;}
+  #mkt h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.25rem,.9rem+1.5vw,2rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #mkt .sub{font-size:clamp(.78rem,.74rem+.2vw,.92rem);line-height:1.8;color:var(--soft);}
+  #mkt .sub b{color:#fff;font-weight:500;}
+
+  /* 演出ラベル（誠実フレーミング） */
+  #mkt .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(0,240,255,.05);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.06em;color:var(--soft);pointer-events:auto;}
+  #mkt .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);}
+  #mkt .honest button{appearance:none;border:none;background:none;color:var(--cyan);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  /* 現在フェーズ表示 */
+  #mkt .phase{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #mkt .phase .pk{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
+  #mkt .phase .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(.95rem,.8rem+.6vw,1.3rem);color:var(--cyan);text-shadow:0 0 18px var(--cyanG);margin-top:2px;}
+  @media(max-width:680px){#mkt .phase{display:none;}#mkt .head{max-width:none;}}
+
+  /* 凡例（写像の対応表） */
+  #mkt .legend{position:absolute;left:clamp(16px,3vw,34px);bottom:clamp(118px,17vw,150px);z-index:5;display:flex;flex-wrap:wrap;gap:6px 18px;max-width:62ch;pointer-events:none;font-size:.7rem;color:var(--soft);letter-spacing:.02em;}
+  #mkt .legend span{display:inline-flex;align-items:center;gap:7px;}
+  #mkt .legend i{width:9px;height:9px;border-radius:2px;flex:none;}
+  @media(max-width:680px){#mkt .legend{display:none;}}
+
+  /* コントロール */
+  #mkt .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(94%,860px);
+    display:flex;flex-direction:column;gap:11px;padding:13px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #mkt .crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  #mkt .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--cyan);background:rgba(0,240,255,.1);color:var(--cyan);font-size:.95rem;cursor:pointer;flex:none;transition:.15s;}
+  #mkt .play:hover{background:rgba(0,240,255,.2);box-shadow:0 0 18px -4px var(--cyanG);}
+  #mkt .scrub{flex:1;min-width:140px;-webkit-appearance:none;appearance:none;height:3px;border-radius:3px;background:rgba(0,240,255,.2);outline:none;cursor:pointer;}
+  #mkt .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--cyan);border:2px solid #07080c;box-shadow:0 0 10px var(--cyanG);}
+  #mkt .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--cyan);border:2px solid #07080c;}
+  #mkt .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  #mkt .chip{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.42em .8em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #mkt .chip:hover{color:#fff;border-color:var(--cyan);background:rgba(0,240,255,.1);}
+  #mkt .chip[aria-current="true"]{color:#07080c;background:var(--cyan);border-color:var(--cyan);}
+  #mkt .tog{appearance:none;border:1px solid var(--bd);background:transparent;color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #mkt .tog:hover{color:#fff;border-color:var(--cyan);}
+  #mkt .tog[aria-pressed="true"]{color:#07080c;background:var(--cyan);border-color:var(--cyan);}
+  #mkt .spacer{flex:1;}
+  #mkt .feedtag{font-family:'Share Tech Mono',monospace;font-size:.66rem;letter-spacing:.04em;color:var(--faint);white-space:nowrap;}
+  #mkt .feedtag b{color:var(--cyan);font-weight:400;}
+
+  /* 解説モーダル */
+  #mkt .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #mkt .modal[open]{display:flex;}
+  #mkt .card{max-width:600px;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px rgba(0,240,255,.25);}
+  #mkt .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--cyan);letter-spacing:.04em;margin-bottom:14px;}
+  #mkt .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #mkt .card p b{color:#fff;font-weight:500;}
+  #mkt .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #mkt .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #mkt .card .x{appearance:none;border:1px solid var(--cyan);background:rgba(0,240,255,.1);color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #mkt .card .x:hover{background:rgba(0,240,255,.2);}
+
+  #mkt :focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:6px;}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="mkt">
+  <canvas aria-label="日経225の銘柄をムクドリの群れに見立てた演出的アニメーション。擬似・記録データで動作します。"></canvas>
+
+  <header class="head">
+    <p class="ey">Murmuration ／ 市場の群れ</p>
+    <h1>市場の関心が、群れになって動く</h1>
+    <p class="sub">日経225の銘柄を<b>一羽の鳥</b>に見立てています。鳥は<b>近くの鳥だけ</b>を見て3つのルール（整列・結合・分離）で飛びます。市場の状態を<b>群れの密集・速さ・向き・分裂</b>へ翻訳した、いわば「相場の体温計」です。</p>
+    <span class="honest"><i class="dot"></i>演出的写像 ・ 擬似／記録データ ・ 予測ではありません<button data-act="about">仕組み</button></span>
+  </header>
+
+  <div class="phase" aria-live="polite">
+    <div class="pk">Now</div>
+    <div class="pv" data-phase>平常</div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><i style="background:var(--cyan)"></i>鳥＝銘柄（大型10社は明るく大きい）</span>
+    <span><i style="background:#5eead4"></i>密集＝相関・関心の集中</span>
+    <span><i style="background:#818cf8"></i>速さ＝出来高・ボラ</span>
+    <span><i style="background:#f0abfc"></i>向き＝相場の方向</span>
+    <span><i style="background:#a78bfa"></i>分裂＝セクター分岐</span>
+    <span><i style="background:#fbbf24"></i>一羽の閃光＝個別イベント</span>
+    <span><i style="background:#f87171"></i>全収束＝市場ショック</span>
+  </div>
+
+  <div class="ctrl" role="group" aria-label="再生と操作">
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="再生／一時停止">❚❚</button>
+      <input class="scrub" type="range" min="0" max="1000" value="0" aria-label="シナリオの再生位置">
+      <span class="feedtag">FEED: <b data-feed>録画シナリオ v1</b></span>
+    </div>
+    <div class="crow">
+      <div class="chips" role="group" aria-label="シーンへ移動">
+        <button class="chip" data-jump="0" aria-current="true">平常</button>
+        <button class="chip" data-jump="1">関心集中</button>
+        <button class="chip" data-jump="2">セクター分岐</button>
+        <button class="chip" data-jump="3">個別イベント</button>
+        <button class="chip" data-jump="4">上昇トレンド</button>
+        <button class="chip" data-jump="5">市場ショック</button>
+        <button class="chip" data-jump="6">回復</button>
+      </div>
+      <span class="spacer"></span>
+      <button class="tog" data-act="labels" aria-pressed="true">銘柄名</button>
+      <button class="tog" data-act="loop" aria-pressed="true">ループ</button>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組み">
+      <h2>これは「演出的写像」です</h2>
+      <p>市場の状態を群れの動きに<b>翻訳しているだけ</b>で、株価を当てるものでも、当社のLogicLock／保存則監査と結びつくものでもありません。リアルタイムの実データではなく、動作確認用の<b>擬似／記録データ</b>で動いています。</p>
+      <p>写像のルールはこの7つです：</p>
+      <ul>
+        <li><b>鳥＝銘柄</b>（日経225。大型10社は明るく大きく、名前を表示）</li>
+        <li><b>密集＝相関・関心の集中</b>（横並びが強いほど群れが締まる）</li>
+        <li><b>速さ＝出来高・ボラティリティ</b>（活発なほど速く揺れる）</li>
+        <li><b>群れの向き＝相場の方向</b>（上＝上昇、下＝下落）</li>
+        <li><b>群れの分裂＝セクター分岐</b>（強い／弱いセクターが離れて飛ぶ）</li>
+        <li><b>一羽の閃光＝個別イベント</b>（決算・材料で1銘柄が際立つ）</li>
+        <li><b>全収束＝市場ショック</b>（全銘柄が一点へ吸い寄せられ散る）</li>
+      </ul>
+      <p>将来は、ここに遅延／日次／有料APIの実データを差し込めるよう、<b>フィード層を分離</b>して作ってあります（東証リアルタイムは無料では使えません）。</p>
+      <button class="x" data-act="close">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(() => {
+  "use strict";
+  const root = document.getElementById("mkt");
+  const canvas = root.querySelector("canvas");
+  const ctx = canvas.getContext("2d");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ============================================================
+     セクター定義（サイト配色に調和したシアン〜青〜紫の家族）
+  ============================================================ */
+  const SECTORS = [
+    { id:"semi",  name:"半導体",  color:"#00f0ff", rgb:[0,240,255]  },
+    { id:"auto",  name:"自動車",  color:"#2463ff", rgb:[36,99,255]  },
+    { id:"fin",   name:"金融",    color:"#5eead4", rgb:[94,234,212] },
+    { id:"telco", name:"通信",    color:"#818cf8", rgb:[129,140,248]},
+    { id:"retail",name:"小売",    color:"#f0abfc", rgb:[240,171,252]},
+    { id:"chem",  name:"素材",    color:"#38bdf8", rgb:[56,189,248] },
+    { id:"pharma",name:"医薬",    color:"#a78bfa", rgb:[167,139,250]},
+    { id:"mach",  name:"機械",    color:"#22d3ee", rgb:[34,211,238] },
+    { id:"trade", name:"商社",    color:"#60a5fa", rgb:[96,165,250] },
+  ];
+  const SECTOR_IX = Object.fromEntries(SECTORS.map((s,i)=>[s.id,i]));
+  // 分岐時の方角（円周に等間隔配置。先頭を上に）
+  SECTORS.forEach((s,i)=>{ const a=-Math.PI/2 + i/SECTORS.length*Math.PI*2; s.ax=Math.cos(a); s.ay=Math.sin(a); });
+
+  // 大型10社（明るく・大きく・ラベル付き）。演出用の代表銘柄。
+  const MAJORS = [
+    { name:"トヨタ",        sector:"auto"   },
+    { name:"ソニーG",       sector:"semi"   },
+    { name:"三菱UFJ",       sector:"fin"    },
+    { name:"キーエンス",     sector:"mach"   },
+    { name:"東エレク",       sector:"semi"   },
+    { name:"ソフトバンクG",  sector:"telco"  },
+    { name:"ファストリ",     sector:"retail" },
+    { name:"信越化学",       sector:"chem"   },
+    { name:"日立",          sector:"mach"   },
+    { name:"任天堂",        sector:"retail" },
+  ];
+
+  const PER_SECTOR = 16;                 // 一般銘柄/セクター
+  const N = SECTORS.length * PER_SECTOR; // ≒ 144 + 大型10社上書き → 日経225のサンプル見立て
+
+  /* ============================================================
+     MARKET FEED（差し替え可能な層）
+     ── 段階1：録画シナリオ。同じ MarketState を返せば段階2（実データ）でも
+        ビュー側は無改造で動く。将来は createLiveFeed(apiClient) を実装して差し替え。
+     MarketState = {
+       phaseIndex, phaseName,
+       marketDir:{x,y},   // 群れの向き（相場方向, 正規化前）
+       volatility,        // 0..1  速さ・ジッタ
+       correlation,       // 0..1  密集（関心集中）
+       shock,             // 0..1  全収束
+       sectorBias:{[id]:{x,y}}, // セクター分岐の引き
+       flareStocks:[idx], // 一羽flare（個別イベント）
+     }
+  ============================================================ */
+  const PHASES = [
+    { name:"平常",         dur:7,  s:{ dir:[0,-0.25], vol:0.28, corr:0.55, shock:0,   spread:0 } },
+    { name:"関心集中",     dur:6,  s:{ dir:[0,-0.30], vol:0.34, corr:0.95, shock:0,   spread:0 } },
+    { name:"セクター分岐", dur:8,  s:{ dir:[0,-0.05], vol:0.42, corr:0.35, shock:0,   spread:1 } },
+    { name:"個別イベント", dur:6,  s:{ dir:[0.1,-0.2], vol:0.40, corr:0.62, shock:0,   spread:0, flares:["__majors__"] } },
+    { name:"上昇トレンド", dur:7,  s:{ dir:[0.12,-0.9], vol:0.72, corr:0.80, shock:0,  spread:0 } },
+    { name:"市場ショック", dur:6,  s:{ dir:[0,0.9],   vol:1.0,  corr:0.30, shock:1.0, spread:0 } },
+    { name:"回復",         dur:8,  s:{ dir:[0.05,-0.4], vol:0.40, corr:0.70, shock:0,  spread:0 } },
+  ];
+  const TOTAL = PHASES.reduce((a,p)=>a+p.dur,0);
+  const PHASE_T0 = (() => { let t=0,arr=[]; for(const p of PHASES){arr.push(t/TOTAL); t+=p.dur;} arr.push(1); return arr; })();
+
+  const lerp=(a,b,u)=>a+(b-a)*u;
+  const ease=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+
+  function phaseAt(t){ // t in 0..1 → {index, local 0..1}
+    for(let i=0;i<PHASES.length;i++){ if(t<PHASE_T0[i+1]||i===PHASES.length-1){
+      const span=PHASE_T0[i+1]-PHASE_T0[i]; return { index:i, local: span>0?(t-PHASE_T0[i])/span:0 }; } }
+    return { index:0, local:0 };
+  }
+  // 録画フィード：現フェーズ→次フェーズへ滑らかに補間し MarketState を返す
+  function recordedFeed(t){
+    const cur=phaseAt(t), i=cur.index, u=ease(Math.min(1,cur.local*1.25));
+    const a=PHASES[i].s, b=PHASES[Math.min(PHASES.length-1,i+1)].s;
+    const dir={ x:lerp(a.dir[0],b.dir[0],u), y:lerp(a.dir[1],b.dir[1],u) };
+    const vol=lerp(a.vol,b.vol,u), corr=lerp(a.corr,b.corr,u), shock=lerp(a.shock||0,b.shock||0,u);
+    const spread=lerp(a.spread||0,b.spread||0,u);
+    let flareStocks=[];
+    const fa=PHASES[i].s.flares;
+    if(fa && cur.local<0.85){ flareStocks = fa.includes("__majors__") ? MAJOR_INDICES : []; }
+    return { phaseIndex:i, phaseName:PHASES[i].name, marketDir:dir, volatility:vol,
+             correlation:corr, shock, sectorSpread:spread, flareStocks };
+  }
+
+  /* ============================================================
+     群れ（Boids）
+  ============================================================ */
+  let W=0,H=0,DPR=1,minDim=900;
+  let boids=[], MAJOR_INDICES=[];
+  const glow={};
+
+  function buildGlow(rgb,r){
+    const s=document.createElement("canvas"); r=Math.ceil(r); s.width=s.height=r*2;
+    const g=s.getContext("2d"), grad=g.createRadialGradient(r,r,0,r,r,r);
+    grad.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.95)`);
+    grad.addColorStop(.35,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.40)`);
+    grad.addColorStop(1,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+    g.fillStyle=grad; g.fillRect(0,0,r*2,r*2); return s;
+  }
+  function makeBoids(){
+    boids=[]; MAJOR_INDICES=[];
+    for(let s=0;s<SECTORS.length;s++) for(let k=0;k<PER_SECTOR;k++)
+      boids.push({ x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*1.5, vy:(Math.random()-.5)*1.5,
+                   sec:s, major:false, name:null, flare:0, seed:Math.random()*6.28 });
+    // 大型10社を上書き（各々の所属セクターの先頭 boid を昇格）
+    MAJORS.forEach((m,mi)=>{ const sec=SECTOR_IX[m.sector]; const b=boids[sec*PER_SECTOR + (mi%PER_SECTOR)];
+      b.major=true; b.name=m.name; MAJOR_INDICES.push(boids.indexOf(b)); });
+  }
+  function resize(){
+    const rect=root.getBoundingClientRect();
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    W=Math.max(1,rect.width); H=Math.max(1,rect.height); minDim=Math.min(W,H);
+    canvas.width=Math.round(W*DPR); canvas.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
+    const gr=Math.max(3.5,minDim*0.0085);
+    for(const s of SECTORS) glow[s.color]=buildGlow(s.rgb,gr);
+    if(!boids.length) makeBoids();
+  }
+
+  /* ============================================================
+     状態 → 力（演出的写像の本体）
+  ============================================================ */
+  let state = recordedFeed(0);
+  let prevShock = 0;
+
+  function step(now){
+    const P = { neighR2:(minDim*0.14)**2, sepR2:(minDim*0.040)**2, lineR2:(minDim*0.060)**2 };
+    const vol=state.volatility, corr=state.correlation, shock=state.shock, spread=state.sectorSpread||0;
+    // 速さ＝出来高・ボラ
+    const maxSpeed = (0.7 + vol*2.6) * (reduce?0.55:1);
+    // 向き＝相場方向
+    const md=state.marketDir, mlen=Math.hypot(md.x,md.y)||1, wind={ x:md.x/mlen, y:md.y/mlen };
+    const windF = 0.045 * (0.6+vol);
+    // 結合（密集）＝相関：高いほど全体重心へ強く寄る。分岐時は弱める。
+    const cohG = (0.0010 + corr*0.0030) * (1 - 0.9*spread);
+    const cx=W/2, cy=H/2;
+    // 分岐＝セクター分岐：各セクターを円周上の自分のアンカーへ引く
+    const R = minDim*0.34;
+    // ショック立ち下がりで外向きインパルス（散る）
+    const shockRelease = (prevShock>0.5 && shock<0.5);
+    prevShock = shock;
+
+    links.length=0;
+    for(let i=0;i<N;i++){
+      const b=boids[i];
+      let aliX=0,aliY=0,cohX=0,cohY=0,sepX=0,sepY=0,nN=0;
+      for(let j=0;j<N;j++){
+        if(i===j) continue;
+        const o=boids[j], dx=o.x-b.x, dy=o.y-b.y, d2=dx*dx+dy*dy;
+        if(d2>P.neighR2||d2===0) continue;
+        nN++; aliX+=o.vx; aliY+=o.vy; cohX+=o.x; cohY+=o.y;
+        if(d2<P.sepR2){ const inv=1/Math.sqrt(d2); sepX-=dx*inv; sepY-=dy*inv; }
+        if(o.sec===b.sec && j>i && d2<P.lineR2) links.push(i,j,b.sec,1-d2/P.lineR2);
+      }
+      let ax=0,ay=0;
+      if(nN>0){
+        ax+=((aliX/nN)-b.vx)*0.055*(0.5+corr); ay+=((aliY/nN)-b.vy)*0.055*(0.5+corr);
+        ax+=((cohX/nN)-b.x)*0.0012*(0.5+corr); ay+=((cohY/nN)-b.y)*0.0012*(0.5+corr);
+      }
+      // 分離（一定）
+      ax+=sepX*0.085; ay+=sepY*0.085;
+      // 向き＝相場方向（全体の風）
+      ax+=wind.x*minDim*windF*0.01; ay+=wind.y*minDim*windF*0.01;
+      // 結合＝相関（重心へ）
+      ax+=(cx-b.x)*cohG; ay+=(cy-b.y)*cohG;
+      // 分裂＝セクター分岐（自分のセクターアンカーへ）
+      if(spread>0.01){ const sc=SECTORS[b.sec], tx=cx+sc.ax*R*spread, ty=cy+sc.ay*R*spread;
+        ax+=(tx-b.x)*0.0026*spread; ay+=(ty-b.y)*0.0026*spread; }
+      // 全収束＝市場ショック
+      if(shock>0.02){ ax+=(cx-b.x)*0.010*shock; ay+=(cy-b.y)*0.010*shock; }
+      if(shockRelease){ const dx=b.x-cx, dy=b.y-cy, d=Math.hypot(dx,dy)+.001; ax+=(dx/d)*minDim*0.010; ay+=(dy/d)*minDim*0.010; }
+      // ボラ・ジッタ
+      if(!reduce){ const jit=0.10+vol*0.55; ax+=(Math.random()-.5)*jit; ay+=(Math.random()-.5)*jit; }
+      // 一羽flare：個別イベント中の銘柄は弾ける
+      if(b.flare>0.01){ const a=Math.sin(now*0.02+b.seed); ax+=a*0.9; ay+=Math.cos(now*0.02+b.seed)*0.9; }
+      // 壁
+      const m=minDim*0.06;
+      if(shock<0.3){
+        if(b.x<m) ax+=(m-b.x)*0.004; if(b.x>W-m) ax-=(b.x-(W-m))*0.004;
+        if(b.y<m) ay+=(m-b.y)*0.004; if(b.y>H-m) ay-=(b.y-(H-m))*0.004;
+      }
+      b.vx+=ax; b.vy+=ay;
+      const sp=Math.hypot(b.vx,b.vy), lim=maxSpeed*(b.flare>0.01?1.8:1);
+      if(sp>lim){ b.vx=b.vx/sp*lim; b.vy=b.vy/sp*lim; }
+      else if(sp<0.12){ b.vx+=(Math.random()-.5)*0.12; b.vy+=(Math.random()-.5)*0.12; }
+      b.x+=b.vx; b.y+=b.vy;
+      if(b.x<0)b.x=0; else if(b.x>W)b.x=W; if(b.y<0)b.y=0; else if(b.y>H)b.y=H;
+      // flare 減衰
+      b.flare*=0.96;
+    }
+    // flare 付与（イベント銘柄に時々点火）
+    if(state.flareStocks && state.flareStocks.length && Math.random()<0.06){
+      const idx=state.flareStocks[(Math.random()*state.flareStocks.length)|0];
+      boids[idx].flare=1;
+    }
+  }
+
+  /* ============================================================
+     描画
+  ============================================================ */
+  let links=[];
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // 残像（軽いトレイル感）
+    ctx.globalAlpha = reduce?1:0.30; ctx.fillStyle="rgba(8,10,18,1)"; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+    // セクター内リンク
+    if(links.length){
+      ctx.lineWidth=1;
+      for(let l=0;l<links.length;l+=4){
+        const a=boids[links[l]], b=boids[links[l+1]], c=SECTORS[links[l+2]].rgb, t=links[l+3];
+        ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${0.10*t*(0.4+state.correlation)})`;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      }
+    }
+    // グロー（加算）
+    ctx.globalCompositeOperation="lighter";
+    for(let i=0;i<N;i++){ const b=boids[i], s=SECTORS[b.sec], g=glow[s.color], r=g.width/2;
+      const sc=b.major?1.7:1; ctx.drawImage(g, b.x-r*sc, b.y-r*sc, g.width*sc, g.height*sc);
+      if(b.flare>0.05){ // 閃光リング
+        ctx.strokeStyle=`rgba(251,191,36,${0.7*b.flare})`; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(b.x,b.y,(1-b.flare)*minDim*0.06+6,0,Math.PI*2); ctx.stroke();
+      }
+    }
+    ctx.globalCompositeOperation="source-over";
+    // コア
+    for(let i=0;i<N;i++){ const b=boids[i]; ctx.fillStyle=b.major?"#ffffff":"rgba(255,255,255,0.85)";
+      ctx.beginPath(); ctx.arc(b.x,b.y,b.major?Math.max(1.6,minDim*0.0022):Math.max(0.6,minDim*0.0012),0,Math.PI*2); ctx.fill(); }
+    // 大型10社ラベル
+    if(showLabels){
+      ctx.font=`500 ${Math.max(10,Math.min(13,minDim*0.014))}px 'Share Tech Mono',monospace`;
+      ctx.textBaseline="middle"; ctx.textAlign="left";
+      for(const idx of MAJOR_INDICES){ const b=boids[idx], s=SECTORS[b.sec];
+        ctx.fillStyle=`rgba(${s.rgb[0]},${s.rgb[1]},${s.rgb[2]},0.92)`;
+        ctx.fillText(b.name, b.x+minDim*0.013, b.y);
+      }
+    }
+  }
+
+  /* ============================================================
+     ループ＆時計
+  ============================================================ */
+  let playing=true, loopOn=true, showLabels=true, running=true;
+  let t=0; const SPEED=1/(TOTAL*60); // 60fps基準で1周= TOTAL秒
+  let last=performance.now();
+
+  function frame(now){
+    const dt=Math.min(2, (now-last)/16.67); last=now;
+    if(running){
+      if(playing){
+        t+=SPEED*dt;
+        if(t>=1){ if(loopOn) t-=1; else { t=1; playing=false; updatePlay(); } }
+      }
+      state=recordedFeed(t);
+      step(now); draw(); syncUI();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ============================================================
+     UI
+  ============================================================ */
+  const playBtn=root.querySelector('[data-act="play"]');
+  const scrub=root.querySelector('.scrub');
+  const phaseEl=root.querySelector('[data-phase]');
+  const chips=[...root.querySelectorAll('[data-jump]')];
+  const labelsBtn=root.querySelector('[data-act="labels"]');
+  const loopBtn=root.querySelector('[data-act="loop"]');
+  const modal=root.querySelector('[data-modal]');
+
+  function updatePlay(){ playBtn.textContent = playing ? "❚❚" : "►"; }
+  let lastPhase=-1;
+  function syncUI(){
+    if(!scrubbing) scrub.value = Math.round(t*1000);
+    if(state.phaseIndex!==lastPhase){
+      lastPhase=state.phaseIndex;
+      phaseEl.textContent=state.phaseName;
+      chips.forEach(c=>c.setAttribute("aria-current", String(+c.dataset.jump===state.phaseIndex)));
+    }
+  }
+  playBtn.addEventListener("click",()=>{ playing=!playing; updatePlay(); });
+  let scrubbing=false;
+  scrub.addEventListener("pointerdown",()=>scrubbing=true);
+  scrub.addEventListener("pointerup",()=>scrubbing=false);
+  scrub.addEventListener("input",()=>{ t=+scrub.value/1000; state=recordedFeed(t); });
+  chips.forEach(c=>c.addEventListener("click",()=>{ t=PHASE_T0[+c.dataset.jump]+0.001; state=recordedFeed(t); if(!playing){playing=true;updatePlay();} }));
+  labelsBtn.addEventListener("click",()=>{ showLabels=!showLabels; labelsBtn.setAttribute("aria-pressed",String(showLabels)); });
+  loopBtn.addEventListener("click",()=>{ loopOn=!loopOn; loopBtn.setAttribute("aria-pressed",String(loopOn)); });
+
+  // 解説モーダル
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>{ modal.setAttribute("open",""); }));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.removeAttribute("open"); });
+
+  // 可視性・リサイズ
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window) new ResizeObserver(resize).observe(root); else addEventListener("resize",resize);
+
+  resize(); updatePlay(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
