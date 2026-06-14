@@ -53,15 +53,23 @@
  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,240,255,.1);}
  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
  #krw-nav .logo span{color:#00f0ff;text-shadow:0 0 18px rgba(0,240,255,.45);}
- #krw-nav .home{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8aa0b8;text-decoration:none;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(0,240,255,.18);padding:7px 14px;border-radius:3px;transition:.2s;}
- #krw-nav .home:hover{color:#fff;border-color:#00f0ff;box-shadow:0 0 16px -4px rgba(0,240,255,.4);}
+ #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+ #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#6b7a90;text-decoration:none;transition:.2s;}
+ #krw-nav .lnk:hover{color:#00f0ff;text-shadow:0 0 12px rgba(0,240,255,.45);}
+ #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,#00f0ff,#2463ff);border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px rgba(0,240,255,.55);transition:transform .15s,box-shadow .15s;}
+ #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
 
- #krw-home-fab{position:fixed;top:12px;right:14px;z-index:200;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,#00f0ff,#2463ff);text-decoration:none;padding:9px 16px;border-radius:8px;box-shadow:0 0 22px -4px rgba(0,240,255,.5);display:inline-flex;align-items:center;gap:7px;transition:transform .15s,box-shadow .15s;}
- #krw-home-fab:hover{transform:translateY(-2px);box-shadow:0 0 32px -2px rgba(0,240,255,.6);}
+ #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,#00f0ff,#2463ff);text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+ #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+ @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+ @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
 </style></head><body>
 <nav id="krw-nav">
   <a href="index.html" class="logo">KR<span>works</span></a>
-  <a href="index.html" class="home">&#8592; Home</a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
 </nav>
 <div id="krw3">
  <div class="head">
