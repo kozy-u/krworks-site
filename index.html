@@ -410,6 +410,22 @@ footer {
   opacity: 1;
   transform: translateY(0);
 }
+.lang-toggle {
+  margin-left: 24px;
+  background: transparent;
+  color: var(--cyan, #00f0ff);
+  border: 1px solid rgba(0,240,255,.4);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+}
+.lang-toggle:hover { background: rgba(0,240,255,.12); }
+@media (max-width: 760px) { .lang-toggle { margin-left: auto; } }
 </style>
   <!-- Microsoft Clarity -->
   <script type="text/javascript">
@@ -426,12 +442,13 @@ footer {
   <div class="container">
     <a href="#" class="logo">KR<span>works</span></a>
     <ul class="nav-links">
-      <li><a href="#business">Business</a></li>
-      <li><a href="demos.html">Demo</a></li>
-      <li><a href="transformer_inside.html">AI Viz</a></li>
-      <li><a href="#company">Company</a></li>
-      <li><a href="#contact">Contact</a></li>
+      <li><a href="#business" data-i18n-ja="事業" data-i18n-en="Business">Business</a></li>
+      <li><a href="demos.html" data-i18n-ja="デモ" data-i18n-en="Demo">Demo</a></li>
+      <li><a href="transformer_inside.html" data-i18n-ja="AI可視化" data-i18n-en="AI Viz">AI Viz</a></li>
+      <li><a href="#company" data-i18n-ja="会社概要" data-i18n-en="Company">Company</a></li>
+      <li><a href="#contact" data-i18n-ja="お問い合わせ" data-i18n-en="Contact">Contact</a></li>
     </ul>
+    <button id="langToggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
   </div>
 </nav>
 
@@ -441,10 +458,10 @@ footer {
     <div class="hero-content">
       <div class="hero-tag">// KR works LLC</div>
       <h1>Building the<br><span class="accent">trust layer</span><br>for technology</h1>
-      <p>AI安全性技術の研究開発とグローバルコマース事業を通じて、人と技術が共存する社会基盤の構築に取り組んでいます。</p>
-      <a href="demos.html" class="demo-cta">デモ一覧を見る <span class="arrow">▶</span></a>
-      <br><a href="transformer_inside.html" class="biz-demo-link" style="margin-top:18px">AI内部の可視化を見る（Transformer） ▶</a>
-      <a href="finance_demo.html" class="biz-demo-link" style="margin-left:18px">市場の群れ ▶</a>
+      <p data-i18n-ja="AI安全性技術の研究開発とグローバルコマース事業を通じて、人と技術が共存する社会基盤の構築に取り組んでいます。" data-i18n-en="Through R&D in AI safety technology and our cross-border commerce business, we are building social infrastructure where people and technology coexist.">AI安全性技術の研究開発とグローバルコマース事業を通じて、人と技術が共存する社会基盤の構築に取り組んでいます。</p>
+      <a href="demos.html" class="demo-cta" data-i18n-ja-html='デモ一覧を見る <span class="arrow">▶</span>' data-i18n-en-html='View all demos <span class="arrow">▶</span>'>デモ一覧を見る <span class="arrow">▶</span></a>
+      <br><a href="transformer_inside.html" class="biz-demo-link" style="margin-top:18px" data-i18n-ja="AI内部の可視化を見る（Transformer） ▶" data-i18n-en="Visualize inside an AI (Transformer) ▶">AI内部の可視化を見る（Transformer） ▶</a>
+      <a href="finance_demo.html" class="biz-demo-link" style="margin-left:18px" data-i18n-ja="市場の群れ ▶" data-i18n-en="Market murmuration ▶">市場の群れ ▶</a>
     </div>
   </div>
   <div class="scroll-hint">
@@ -458,21 +475,21 @@ footer {
 <section id="business">
   <div class="container">
     <div class="section-label">// Business</div>
-    <h2 class="section-title">事業内容</h2>
+    <h2 class="section-title" data-i18n-ja="事業内容" data-i18n-en="Our Business">事業内容</h2>
     <div class="biz-grid">
       <div class="biz-card reveal">
         <div class="biz-card-num">01</div>
-        <h3>AI安全性技術の研究開発</h3>
-        <p>AIシステムの出力を物理法則に基づいてリアルタイムに監査する技術を研究開発しています。車両・医療・電力・製造など多分野での応用を目指し、研究・開発を進めています。</p>
+        <h3 data-i18n-ja="AI安全性技術の研究開発" data-i18n-en="AI Safety Technology R&D">AI安全性技術の研究開発</h3>
+        <p data-i18n-ja="AIシステムの出力を物理法則に基づいてリアルタイムに監査する技術を研究開発しています。車両・医療・電力・製造など多分野での応用を目指し、研究・開発を進めています。" data-i18n-en="We research and develop technology to audit the outputs of AI systems in real time based on physical laws, advancing applications across many fields including automotive, medical, power, and manufacturing.">AIシステムの出力を物理法則に基づいてリアルタイムに監査する技術を研究開発しています。車両・医療・電力・製造など多分野での応用を目指し、研究・開発を進めています。</p>
         <span class="biz-tag">R&D / Patent pending</span>
-        <br><a href="agv_demo.html" class="biz-demo-link">倉庫AGV安全走行デモを見る ▶</a>
-        <br><a href="transformer_inside.html" class="biz-demo-link">AI内部の可視化デモを見る（Transformer） ▶</a>
-        <br><a href="demos.html" class="biz-demo-link">デモ一覧（ギャラリー）を見る ▶</a>
+        <br><a href="agv_demo.html" class="biz-demo-link" data-i18n-ja="倉庫AGV安全走行デモを見る ▶" data-i18n-en="View the warehouse AGV safe-navigation demo ▶">倉庫AGV安全走行デモを見る ▶</a>
+        <br><a href="transformer_inside.html" class="biz-demo-link" data-i18n-ja="AI内部の可視化デモを見る（Transformer） ▶" data-i18n-en="View the AI-internals visualization demo (Transformer) ▶">AI内部の可視化デモを見る（Transformer） ▶</a>
+        <br><a href="demos.html" class="biz-demo-link" data-i18n-ja="デモ一覧（ギャラリー）を見る ▶" data-i18n-en="View the demo gallery ▶">デモ一覧（ギャラリー）を見る ▶</a>
       </div>
       <div class="biz-card reveal">
         <div class="biz-card-num">02</div>
-        <h3>グローバルコマース事業</h3>
-        <p>日本の価値ある商品を海外市場へ届けるクロスボーダーEC事業を展開しています。越境ECプラットフォームを活用し、グローバルな販路を構築しています。</p>
+        <h3 data-i18n-ja="グローバルコマース事業" data-i18n-en="Global Commerce">グローバルコマース事業</h3>
+        <p data-i18n-ja="日本の価値ある商品を海外市場へ届けるクロスボーダーEC事業を展開しています。越境ECプラットフォームを活用し、グローバルな販路を構築しています。" data-i18n-en="We operate a cross-border e-commerce business that brings valuable Japanese products to overseas markets, building global sales channels through cross-border EC platforms.">日本の価値ある商品を海外市場へ届けるクロスボーダーEC事業を展開しています。越境ECプラットフォームを活用し、グローバルな販路を構築しています。</p>
         <span class="biz-tag">Cross-border EC</span>
       </div>
     </div>
@@ -484,23 +501,23 @@ footer {
 <section id="company">
   <div class="container">
     <div class="section-label">// Company</div>
-    <h2 class="section-title">会社概要</h2>
+    <h2 class="section-title" data-i18n-ja="会社概要" data-i18n-en="Company">会社概要</h2>
     <table class="info-table reveal">
       <tr>
-        <th>Name</th>
-        <td>KR works LLC（合同会社KR works）</td>
+        <th data-i18n-ja="会社名" data-i18n-en="Name">Name</th>
+        <td data-i18n-ja="KR works LLC（合同会社KR works）" data-i18n-en="KR works LLC">KR works LLC（合同会社KR works）</td>
       </tr>
       <tr>
-        <th>Founded</th>
-        <td>2026年4月</td>
+        <th data-i18n-ja="設立" data-i18n-en="Founded">Founded</th>
+        <td data-i18n-ja="2026年4月" data-i18n-en="April 2026">2026年4月</td>
       </tr>
       <tr>
-        <th>Location</th>
-        <td>宮崎県</td>
+        <th data-i18n-ja="所在地" data-i18n-en="Location">Location</th>
+        <td data-i18n-ja="宮崎県" data-i18n-en="Miyazaki, Japan">宮崎県</td>
       </tr>
       <tr>
-        <th>Business</th>
-        <td>AI安全性技術の研究開発<br>クロスボーダーEC事業</td>
+        <th data-i18n-ja="事業" data-i18n-en="Business">Business</th>
+        <td data-i18n-ja-html="AI安全性技術の研究開発<br>クロスボーダーEC事業" data-i18n-en-html="AI Safety Technology R&D<br>Cross-border E-commerce">AI安全性技術の研究開発<br>クロスボーダーEC事業</td>
       </tr>
     </table>
   </div>
@@ -511,26 +528,26 @@ footer {
 <section id="contact">
   <div class="container">
     <div class="section-label">// Contact</div>
-    <h2 class="section-title">お問い合わせ</h2>
+    <h2 class="section-title" data-i18n-ja="お問い合わせ" data-i18n-en="Contact">お問い合わせ</h2>
     <p style="font-size: 14px; color: var(--text-dim); line-height: 1.9; margin-bottom: 36px;">
-      事業に関するお問い合わせは、下記フォームよりご連絡ください。
+      <span data-i18n-ja="事業に関するお問い合わせは、下記フォームよりご連絡ください。" data-i18n-en="For business inquiries, please contact us using the form below.">事業に関するお問い合わせは、下記フォームよりご連絡ください。</span>
     </p>
     <div class="form-wrap reveal">
       <div class="form-row">
-        <label for="name">お名前 <span class="req">*</span></label>
-        <input type="text" id="name" name="name" required placeholder="山田 太郎">
+        <label for="name" data-i18n-ja-html="お名前 <span class=&quot;req&quot;>*</span>" data-i18n-en-html="Name <span class=&quot;req&quot;>*</span>">お名前 <span class="req">*</span></label>
+        <input type="text" id="name" name="name" required placeholder="山田 太郎" data-i18n-ph-ja="山田 太郎" data-i18n-ph-en="Your name">
       </div>
       <div class="form-row">
-        <label for="companyInput">会社名</label>
-        <input type="text" id="companyInput" name="company" placeholder="株式会社〇〇">
+        <label for="companyInput" data-i18n-ja="会社名" data-i18n-en="Company name">会社名</label>
+        <input type="text" id="companyInput" name="company" placeholder="株式会社〇〇" data-i18n-ph-ja="株式会社〇〇" data-i18n-ph-en="Your company">
       </div>
       <div class="form-row">
-        <label for="email">メールアドレス <span class="req">*</span></label>
+        <label for="email" data-i18n-ja-html="メールアドレス <span class=&quot;req&quot;>*</span>" data-i18n-en-html="Email <span class=&quot;req&quot;>*</span>">メールアドレス <span class="req">*</span></label>
         <input type="email" id="email" name="email" required placeholder="example@mail.com">
       </div>
       <div class="form-row">
-        <label for="message">お問い合わせ内容 <span class="req">*</span></label>
-        <textarea id="message" name="message" rows="5" required placeholder="お問い合わせ内容をご記入ください"></textarea>
+        <label for="message" data-i18n-ja-html="お問い合わせ内容 <span class=&quot;req&quot;>*</span>" data-i18n-en-html="Message <span class=&quot;req&quot;>*</span>">お問い合わせ内容 <span class="req">*</span></label>
+        <textarea id="message" name="message" rows="5" required placeholder="お問い合わせ内容をご記入ください" data-i18n-ph-ja="お問い合わせ内容をご記入ください" data-i18n-ph-en="Please enter your message"></textarea>
       </div>
       <input type="text" id="_gotcha" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
       <button type="button" id="submitBtn">SEND &#9656;</button>
@@ -691,17 +708,17 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
   if (!name || !email || !message) {
     result.style.display = 'block';
     result.style.color = '#f87171';
-    result.textContent = '必須項目をすべてご入力ください。';
+    result.textContent = (document.documentElement.lang==='en' ? 'Please fill in all required fields.' : '必須項目をすべてご入力ください。');
     return;
   }
   if (!emailEl.checkValidity()) {
     result.style.display = 'block';
     result.style.color = '#f87171';
-    result.textContent = 'メールアドレスの形式をご確認ください。';
+    result.textContent = (document.documentElement.lang==='en' ? 'Please check your email address.' : 'メールアドレスの形式をご確認ください。');
     return;
   }
   this.disabled = true;
-  this.textContent = 'SENDING...';
+  this.textContent = (document.documentElement.lang==='en' ? 'SENDING...' : '送信中...');
   try {
     const res = await fetch('https://formspree.io/f/mqejoblo', {
       method: 'POST',
@@ -711,17 +728,55 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
     if (res.ok) {
       result.style.display = 'block';
       result.style.color = '#00f0ff';
-      result.textContent = 'メールを送信しました。お問い合わせありがとうございます。';
+      result.textContent = (document.documentElement.lang==='en' ? 'Your message has been sent. Thank you for your inquiry.' : 'メールを送信しました。お問い合わせありがとうございます。');
       ['name','companyInput','email','message'].forEach(id => document.getElementById(id).value = '');
     } else { throw new Error(); }
   } catch (e) {
     result.style.display = 'block';
     result.style.color = '#f87171';
-    result.textContent = '送信に失敗しました。時間をおいて再度お試しください。';
+    result.textContent = (document.documentElement.lang==='en' ? 'Sending failed. Please try again later.' : '送信に失敗しました。時間をおいて再度お試しください。');
   }
   this.disabled = false;
   this.textContent = 'SEND \u25B6';
 });
+</script>
+<script>
+/* ── KRworks i18n (EN default / JP browser auto / manual toggle) ── */
+(function(){
+  function applyLang(lang){
+    document.documentElement.lang = lang;
+    var jaT = lang==='ja';
+    document.querySelectorAll('[data-i18n-ja]').forEach(function(el){
+      var v = el.getAttribute(jaT ? 'data-i18n-ja' : 'data-i18n-en');
+      if (v!=null) el.textContent = v;
+    });
+    document.querySelectorAll('[data-i18n-ja-html]').forEach(function(el){
+      var v = el.getAttribute(jaT ? 'data-i18n-ja-html' : 'data-i18n-en-html');
+      if (v!=null) el.innerHTML = v;
+    });
+    document.querySelectorAll('[data-i18n-ph-ja]').forEach(function(el){
+      var v = el.getAttribute(jaT ? 'data-i18n-ph-ja' : 'data-i18n-ph-en');
+      if (v!=null) el.setAttribute('placeholder', v);
+    });
+    var btn = document.getElementById('langToggle');
+    if (btn) btn.textContent = jaT ? 'EN' : '日本語';
+    try { localStorage.setItem('krw-lang', lang); } catch(e){}
+  }
+  function initialLang(){
+    var saved=null; try { saved = localStorage.getItem('krw-lang'); } catch(e){}
+    if (saved==='ja' || saved==='en') return saved;
+    var nl = (navigator.language || navigator.userLanguage || '').toLowerCase();
+    return nl.indexOf('ja')===0 ? 'ja' : 'en';   /* 既定は英語、日本語ブラウザのみ日本語 */
+  }
+  function ready(fn){ if (document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(function(){
+    applyLang(initialLang());
+    var btn = document.getElementById('langToggle');
+    if (btn) btn.addEventListener('click', function(){
+      applyLang(document.documentElement.lang==='ja' ? 'en' : 'ja');
+    });
+  });
+})();
 </script>
 </body>
 </html>
