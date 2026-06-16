@@ -548,6 +548,7 @@ footer {
 
 <script>
 // ── Particle Network ──
+try {
 (function() {
   const c = document.getElementById('heroCanvas');
   const ctx = c.getContext('2d');
@@ -672,6 +673,7 @@ const obs = new IntersectionObserver((entries) => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.15 });
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+} catch (e) { console.error('background fx error (non-fatal):', e); }
 </script>
 
 <script>
