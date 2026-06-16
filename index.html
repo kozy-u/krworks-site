@@ -521,8 +521,8 @@ footer {
         <input type="text" id="name" name="name" required placeholder="山田 太郎">
       </div>
       <div class="form-row">
-        <label for="company">会社名</label>
-        <input type="text" id="company" name="company" placeholder="株式会社〇〇">
+        <label for="companyInput">会社名</label>
+        <input type="text" id="companyInput" name="company" placeholder="株式会社〇〇">
       </div>
       <div class="form-row">
         <label for="email">メールアドレス <span class="req">*</span></label>
@@ -682,7 +682,7 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim();
   const message = document.getElementById('message').value.trim();
-  const company = document.getElementById('company').value.trim();
+  const company = document.getElementById('companyInput').value.trim();
   const gotchaEl = document.getElementById('_gotcha');
   const gotcha = gotchaEl ? gotchaEl.value : '';
   const emailEl = document.getElementById('email');
@@ -712,7 +712,7 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
       result.style.display = 'block';
       result.style.color = '#00f0ff';
       result.textContent = 'メールを送信しました。お問い合わせありがとうございます。';
-      ['name','company','email','message'].forEach(id => document.getElementById(id).value = '');
+      ['name','companyInput','email','message'].forEach(id => document.getElementById(id).value = '');
     } else { throw new Error(); }
   } catch (e) {
     result.style.display = 'block';
