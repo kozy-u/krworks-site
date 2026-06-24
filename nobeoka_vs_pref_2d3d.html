@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宮崎県 製造品出荷額 — 2D/3D [cyber] | KR works LLC</title>
+<meta name="description" content="延岡市と宮崎県の製造品出荷額（億円）の推移を業種別に示し、2Dの折れ線とライン間を飛行する3D表示を切り替えられる教育・分析用の可視化。出典は宮崎県・経済センサス。予測ではありません。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#04050a; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.55);
+    --mag:#ff2e97; --magG:rgba(255,46,151,.55);
+    --ink:#dbe6f2; --soft:#9fb2c8; --faint:#62748d; --bd:rgba(0,240,255,.18);
+    --line:rgba(120,200,255,.07);
+    /* series palette (shared 2D/3D) */
+    --ken:#38bdf8; --nob:#f59e0b; --share:#fbbf24;
+    --food:#a78bfa; --chem:#34d399; --elec:#f472b6;
+    --accent:#f59e0b; --accentG:rgba(245,158,11,.4);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{min-height:100%;}
+  body{background:
+      radial-gradient(120% 70% at 50% -10%, rgba(245,158,11,.06) 0%, rgba(4,5,10,0) 55%),
+      radial-gradient(100% 60% at 85% 10%, rgba(0,240,255,.06) 0%, rgba(4,5,10,0) 50%),
+      linear-gradient(180deg,#04050b 0%,#06070f 55%,#080a14 100%);
+    color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(4,5,10,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#04050a;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--accent));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -2px var(--accentG);transition:transform .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:clamp(18px,3.5vw,40px) clamp(14px,3vw,30px) 56px;}
+  .eyebrow{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);margin-bottom:.8em;}
+  h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.35rem,1rem+1.8vw,2.2rem);line-height:1.28;color:#fff;margin-bottom:.5em;text-shadow:0 0 22px rgba(0,240,255,.18);}
+  .lede{font-size:clamp(.84rem,.8rem+.2vw,.98rem);line-height:1.82;color:var(--soft);max-width:76ch;}
+  .lede b{color:#fff;font-weight:500;} .lede .hot{color:var(--elec);font-weight:700;} .lede .ok{color:var(--chem);font-weight:700;}
+
+  .viewbar{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap;}
+  .vbtn{font-family:'Orbitron',sans-serif;font-weight:500;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;color:#04050a;background:linear-gradient(90deg,var(--cyan),var(--chem));border:none;padding:10px 20px;border-radius:9px;cursor:pointer;box-shadow:0 0 22px -4px var(--cyanG);transition:transform .15s;display:inline-flex;align-items:center;gap:8px;}
+  .vbtn:hover{transform:translateY(-2px);}
+  .vbar-note{font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.1em;color:var(--faint);}
+
+  .honest{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(245,158,11,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.05em;color:var(--soft);}
+  .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+
+  .card{position:relative;margin-top:24px;border:1px solid var(--bd);border-radius:14px;background:linear-gradient(180deg,rgba(8,11,20,.7),rgba(6,8,15,.55));padding:clamp(16px,2.4vw,26px);box-shadow:0 0 60px -26px var(--cyanG);}
+  .card::before,.card::after{content:"";position:absolute;width:18px;height:18px;pointer-events:none;}
+  .card::before{top:-1px;left:-1px;border-top:2px solid var(--accent);border-left:2px solid var(--accent);}
+  .card::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);}
+  .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1rem,.9rem+.5vw,1.22rem);color:#fff;margin-bottom:3px;}
+  .card .sub{font-family:'Share Tech Mono',monospace;font-size:.8rem;color:var(--faint);letter-spacing:.03em;margin-bottom:12px;}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin:6px 0 4px;}
+  .lg{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--soft);font-family:'Share Tech Mono',monospace;}
+  .lg i{width:22px;height:3px;border-radius:2px;flex:none;box-shadow:0 0 8px currentColor;}
+  .lg i.dot{width:9px;height:9px;border-radius:50%;}
+  .lg b{color:#fff;font-weight:500;}
+  .chart{width:100%;height:auto;display:block;margin-top:6px;}
+  .takeaway{margin-top:14px;padding:12px 15px;border-left:3px solid var(--accent);background:rgba(245,158,11,.05);border-radius:0 8px 8px 0;font-size:.85rem;line-height:1.8;color:var(--soft);}
+  .takeaway b{color:#fff;font-weight:500;} .takeaway .hot{color:var(--elec);font-weight:700;} .takeaway .ok{color:var(--chem);font-weight:700;}
+  svg text{font-family:'Share Tech Mono',monospace;}
+
+  /* 3D stage */
+  .stage{position:relative;margin-top:14px;border:1px solid var(--bd);border-radius:14px;overflow:hidden;background:#04050a;box-shadow:0 0 60px -26px var(--cyanG);}
+  .stage::before,.stage::after{content:"";position:absolute;width:20px;height:20px;pointer-events:none;z-index:6;}
+  .stage::before{top:-1px;left:-1px;border-top:2px solid var(--accent);border-left:2px solid var(--accent);}
+  .stage::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);}
+  #scene{display:block;width:100%;height:clamp(360px,56vw,620px);cursor:grab;touch-action:none;}
+  #scene:active{cursor:grabbing;}
+  .scan{position:absolute;inset:0;z-index:4;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.14) 2px 3px);mix-blend-mode:multiply;}
+  .vig{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(130% 100% at 50% 50%,rgba(0,0,0,0) 58%,rgba(0,0,0,.55) 100%);}
+  .hud{position:absolute;left:14px;top:14px;z-index:5;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.05em;line-height:1.7;color:var(--soft);pointer-events:none;text-shadow:0 0 8px rgba(0,0,0,.8);}
+  .hud .yr{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:700;color:#fff;text-shadow:0 0 16px var(--cyanG);letter-spacing:1px;}
+  .hud .row{display:flex;gap:8px;align-items:center;}
+  .hud .sw{width:10px;height:10px;border-radius:2px;box-shadow:0 0 8px currentColor;flex:none;}
+  .hud .v{color:#fff;font-weight:500;} .hud .up{color:var(--chem);}
+  .ctl{position:absolute;right:14px;bottom:14px;z-index:5;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .ctl button{font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.08em;color:var(--cyan);background:rgba(4,6,12,.7);border:1px solid var(--bd);border-radius:7px;padding:7px 12px;cursor:pointer;text-transform:uppercase;transition:.15s;backdrop-filter:blur(4px);}
+  .ctl button:hover{background:rgba(0,240,255,.12);color:#fff;}
+  .ctl button.on{background:linear-gradient(90deg,var(--cyan),var(--chem));color:#04050a;border-color:transparent;}
+  .hint{position:absolute;left:14px;bottom:12px;z-index:5;font-family:'Share Tech Mono',monospace;font-size:.66rem;color:var(--faint);pointer-events:none;}
+
+  .src{margin-top:26px;font-family:'Share Tech Mono',monospace;font-size:.7rem;line-height:1.9;color:var(--faint);border-top:1px solid var(--bd);padding-top:16px;}
+  .src b{color:var(--soft);font-weight:400;}
+</style>
+</head>
+<body>
+<nav id="krw-nav"><a href="index.html" class="logo">KR<span>works</span></a><a href="index.html" class="home">&#8592; Home</a></nav>
+
+<div class="wrap">
+  <p class="eyebrow">宮崎県・延岡市 ／ 製造品出荷額</p>
+  <h1>延岡の名目出荷額は外生ショック後も底堅い ─ 集計・価額ベースでは半導体喪失が識別されない</h1>
+  <p class="lede">延岡市は宮崎県最大の製造拠点（県の約2割）。AKM半導体工場の焼失（2020年10月）にもかかわらず、<b>延岡の製造品出荷額は増加</b>し県内シェアも上昇しました。理由は延岡の中心が<span class="ok">旭化成の化学・繊維・医薬</span>で、これが2021–22年に伸びたため。<span class="hot">電子部品の喪失は金額では総額に埋もれて見えません</span>。まず2Dの折れ線で全体を確認し、<b>「⤢ 3Dモード」</b>で県の業種別出荷額（億円）のラインの間を飛行する立体表示に切り替えられます。予測ではありません。</p>
+  <div class="viewbar">
+    <button id="to3d" class="vbtn">⤢ 3Dモード</button>
+    <button id="to2d" class="vbtn" style="display:none">← 2Dグラフに戻る</button>
+    <span class="vbar-note" id="viewNote">VIEW: 2D LINE CHART</span>
+  </div>
+  <span class="honest"><span class="dot"></span>公的統計の実数による分析・教育用の可視化（予測ではありません）</span>
+
+  <!-- ===== 2D view ===== -->
+  <div id="view2d">
+    <div class="card">
+      <h2>① 延岡市 vs 宮崎県 ─ 製造品出荷額（億円）</h2>
+      <div class="sub">従業者4人以上 ／ 2013–2022実績 ／ 延岡は4時点（2015・2020＝センサス、2021・2022＝事業所調査）</div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--ken);color:var(--ken)"></i><b>宮崎県 計</b>（左軸）</span>
+        <span class="lg"><i style="background:var(--nob);color:var(--nob)"></i><b>延岡市</b>（左軸）</span>
+        <span class="lg"><i class="dot" style="background:var(--share);color:var(--share)"></i><b>延岡シェア</b>（右軸 %）</span>
+      </div>
+      <svg id="cA" class="chart" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="takeaway">県計は2022年18,195億へ。<b>延岡は火災を挟んでも増加</b>し、シェアは18.2%→21.7%へ<b>上昇</b>。総額で見るかぎり「延岡が震源」という痕跡はゼロ。<span class="hot">AKMの喪失は総額には現れない</span>。<br><span style="color:var(--faint)">※2020→2021でシェアが跳ねるのは化学の伸びに加え、センサス→事業所調査の集計範囲差（接続注意）も含む。</span></div>
+    </div>
+
+    <div class="card">
+      <h2>② なぜ落ちないか ─ 宮崎県 業種別 出荷額（億円）</h2>
+      <div class="sub">従業者4人以上 ／ 2013–2022実績（県計の内訳）／ この3本が3Dの対象</div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--food);color:var(--food)"></i><b>食料品</b></span>
+        <span class="lg"><i style="background:var(--chem);color:var(--chem)"></i><b>化学</b>（旭化成系）</span>
+        <span class="lg"><i style="background:var(--elec);color:var(--elec)"></i><b>電子部品・デバイス</b></span>
+      </div>
+      <svg id="cB" class="chart" viewBox="0 0 920 420" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="takeaway"><span class="ok">化学は2020年1,276億→2022年1,927億へ急伸</span>（旭化成の延岡が主力）。食料品も4,184億へ拡大。一方、電子部品の名目出荷額は減少しない。価額は数量×価格に分解でき、半導体価格の上昇とファブライト化に伴う付加価値シフトが数量の減少を相殺し、さらに化学への業種構成シフトが県計を押し上げる。<b>価額ベースの集計統計では当該供給ショックは識別されず</b>、<span class="hot">数量ベースの生産指数（IIP）でのみ顕在化し、電子部品は2024年に37へ低下した</span>。</div>
+    </div>
+  </div>
+
+  <!-- ===== 3D view ===== -->
+  <div id="view3d" style="display:none">
+    <div class="card" style="margin-top:18px">
+      <h2>業種別 出荷額（億円）を立体化 ─ ラインの間を飛行</h2>
+      <div class="sub">宮崎県 製造品出荷額・億円（食料品／化学／電子部品, 2013–2022）</div>
+      <div class="stage">
+        <canvas id="scene"></canvas>
+        <div class="hud">
+          <div class="yr" id="hudYear">2013</div>
+          <div class="row"><span class="sw" style="background:var(--food);color:var(--food)"></span>食料品 <span class="v" id="vFood">–</span></div>
+          <div class="row"><span class="sw" style="background:var(--chem);color:var(--chem)"></span>化学 <span class="v" id="vChem">–</span> <span class="up" id="vChemA"></span></div>
+          <div class="row"><span class="sw" style="background:var(--elec);color:var(--elec)"></span>電子部品 <span class="v" id="vElec">–</span></div>
+        </div>
+        <div class="ctl">
+          <button id="btnPlay" class="on">❚❚ PAUSE</button>
+          <button id="btnSlow">SPEED ×1</button>
+          <button id="btnReset">RESET VIEW</button>
+        </div>
+        <div class="hint">全景 → ライン間飛行 → 全景に戻って終了　／　DRAG = 視点　WHEEL = 速度　SPACE = 停止</div>
+        <div class="scan"></div><div class="vig"></div>
+      </div>
+      <div class="takeaway"><span class="ok">化学（緑）が2020→2022で急伸</span>して総額の床を押し上げ、食料品（紫）も高水準。電子部品（桃）は金額では崩れない。立体で見ると「金額では誰も谷に落ちていない」＝<b>金額統計ではAKM打撃が映らない</b>ことが地形として分かる。</div>
+    </div>
+  </div>
+
+  <div class="src">
+    <b>出典：</b>宮崎県／総務省・経済産業省「経済センサス-活動調査（製造業）」（2015・2020）、「経済構造実態調査（製造業事業所調査）」（2021・2022）第14表・第29表。延岡＝市町村別製造品出荷額等（従業者4人以上）。<br>
+    <b>注：</b>2015・2020は経済センサス、2021・2022は事業所調査で集計範囲が異なり単純比較不可（接続注意）。金額は製造品出荷額等（価額）で、生産“数量”指数（IIP）とは別概念。市町村別×電子部品は秘匿（X）。3D配置・飛行は理解を助ける演出で、奥行き（系列の並び順）に定量的意味はありません。本資料は教育・分析目的で、当社の他事業や予測とは無関係。すべてブラウザ内で描画し、データの外部送信はありません。
+  </div>
+</div>
+
+<!-- ===== 3D engine ===== -->
+<script>
+(function(){
+  "use strict";
+  const cv=document.getElementById('scene'), ctx=cv.getContext('2d');
+  let W=0,H=0,DPR=1;
+  function resize(){
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    const r=cv.getBoundingClientRect(); W=Math.max(1,r.width); H=Math.max(1,r.height);
+    cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize',resize);
+
+  // ---- real data (宮崎県 業種別 製造品出荷額・億円, unchanged) ----
+  const YEARS=[2013,2014,2015,2016,2017,2018,2019,2020,2021,2022];
+  const FOOD=[2946,3170,3276,3675,3826,3644,3252,3698,3934,4184];
+  const CHEM=[1448,1512,1675,1462,1675,1756,1521,1276,1858,1927];
+  const ELEC=[1461,1614,1640,1666,1846,1841,1742,1850,1657,2096];
+  const NL=YEARS.length, LAST=NL-1;
+  const SEP=26;
+  const SERIES=[
+    {key:'food', z:-SEP, vals:FOOD, col:[167,139,250], name:'食料品'},
+    {key:'chem', z:0,    vals:CHEM, col:[52,211,153], name:'化学'},
+    {key:'elec', z:+SEP, vals:ELEC, col:[244,114,182], name:'電子部品'}
+  ];
+  const VMAX=4500, HY=152;
+  const VTICKS=[1000,2000,3000,4000];
+  const UX=20;
+  const Xw=y=>(y-2017.5)*UX;
+  const Yw=v=>v*(HY/VMAX);
+  const FLOORY=0;
+  const XSTART=Xw(2013)-46, XEND=Xw(2022)+52;
+  const FIRE=2020;
+
+  // ---- camera (cinematic timeline) ----
+  let T=0, paused=false, speedMul=1, ended=false, flightPhase=false;
+  let userYaw=0,userPitch=0,targetYaw=0,targetPitch=0;
+  const TL_RATE=1/27;
+  let eye=[0,0,0], fwd=[1,0,0], right=[0,0,1], up=[0,1,0];
+  let focal=400;
+  const FOV=74, NEAR=3.0, FOG0=60, FOG1=470;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const CX=(XSTART+XEND)/2;
+  let POSE_FAR={eye:[CX-16,Yw(2900),-200], tgt:[CX+4,Yw(2200),2]};
+  let POSE_EST={eye:[CX-8, Yw(2600),-170], tgt:[CX+4,Yw(2200),2]};
+  function estDistance(){
+    const tan=Math.tan((FOV*Math.PI/180)/2);
+    const halfW=150, halfH=84;
+    const dW=halfW/(Math.max(0.55,(W/H))*tan), dH=halfH/tan;
+    return Math.max(dW,dH)*1.04;
+  }
+  function pathEye(p){
+    const x=XSTART+(XEND-XSTART)*p;
+    const z=Math.sin(p*Math.PI*2*2.25)*SEP*0.62;
+    const y=Yw(2350)+Math.sin(p*Math.PI*2*3.0)*7;
+    return [x,y,z];
+  }
+  function poseFlight(p){ return {eye:pathEye(p), tgt:pathEye(Math.min(1,p+0.012))}; }
+  function cross(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
+  function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
+  function clamp01(x){return x<0?0:x>1?1:x;}
+  function ss(a,b,t){const x=clamp01((t-a)/(b-a));return x*x*(3-2*x);}
+  function eio(u){return u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;}
+  function lerp3(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+  function blendPose(pa,pb,u){return {eye:lerp3(pa.eye,pb.eye,u),tgt:lerp3(pa.tgt,pb.tgt,u)};}
+  function rot(v,axis,ang){const c=Math.cos(ang),s=Math.sin(ang),d=v[0]*axis[0]+v[1]*axis[1]+v[2]*axis[2],cr=cross(axis,v);
+    return [v[0]*c+cr[0]*s+axis[0]*d*(1-c), v[1]*c+cr[1]*s+axis[1]*d*(1-c), v[2]*c+cr[2]*s+axis[2]*d*(1-c)];}
+
+  const SEG={A:[0.00,0.15], B:[0.15,0.27], C:[0.27,0.80], D:[0.80,0.91]};
+  function poseAt(t){
+    if(t<SEG.A[1]){ flightPhase=false; return blendPose(POSE_FAR,POSE_EST, ss(SEG.A[0],SEG.A[1],t)); }
+    if(t<SEG.B[1]){ flightPhase=false; return blendPose(POSE_EST,poseFlight(0), eio(ss(SEG.B[0],SEG.B[1],t))); }
+    if(t<SEG.C[1]){ flightPhase=true;  const u=(t-SEG.C[0])/(SEG.C[1]-SEG.C[0]); return poseFlight(eio(u)); }
+    if(t<SEG.D[1]){ flightPhase=false; return blendPose(poseFlight(1),POSE_EST, eio(ss(SEG.D[0],SEG.D[1],t))); }
+    flightPhase=false; return POSE_EST;
+  }
+  function updateCamera(){
+    const d=estDistance();
+    POSE_EST.eye=[CX-8, Yw(2600), -d];        POSE_EST.tgt=[CX+4, Yw(2200), 2];
+    POSE_FAR.eye=[CX-16, Yw(3000), -d*1.17];  POSE_FAR.tgt=POSE_EST.tgt;
+    const ps=poseAt(T); eye=ps.eye;
+    userYaw += (targetYaw-userYaw)*0.12; userPitch += (targetPitch-userPitch)*0.12;
+    let f=norm([ps.tgt[0]-eye[0], ps.tgt[1]-eye[1], ps.tgt[2]-eye[2]]);
+    f=norm(rot(f,[0,1,0],userYaw));
+    let r=norm(cross(f,[0,1,0]));
+    f=norm(rot(f,r,userPitch));
+    right=norm(cross(f,[0,1,0])); up=cross(right,f); fwd=f;
+    focal=(H/2)/Math.tan((FOV*Math.PI/180)/2);
+  }
+
+  function toCam(p){const dx=p[0]-eye[0],dy=p[1]-eye[1],dz=p[2]-eye[2];
+    return [dx*right[0]+dy*right[1]+dz*right[2], dx*up[0]+dy*up[1]+dz*up[2], dx*fwd[0]+dy*fwd[1]+dz*fwd[2]];}
+  function proj(c){const s=focal/c[2]; return [W/2+c[0]*s, H/2-c[1]*s];}
+  function fogA(cz){let t=(cz-FOG0)/(FOG1-FOG0);return Math.max(0,Math.min(1,1-t));}
+  function lerpP(a,b,t){return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];}
+  function clipSeg(a,b){
+    if(a[2]<NEAR && b[2]<NEAR) return null;
+    if(a[2]<NEAR){const t=(NEAR-a[2])/(b[2]-a[2]); a=lerpP(a,b,t);}
+    else if(b[2]<NEAR){const t=(NEAR-b[2])/(a[2]-b[2]); b=lerpP(b,a,t);}
+    return [a,b];
+  }
+  function clipPoly(poly){
+    const out=[]; const n=poly.length;
+    for(let i=0;i<n;i++){ const cur=poly[i], prv=poly[(i-1+n)%n];
+      const ci=cur[2]>=NEAR, pi=prv[2]>=NEAR;
+      if(ci){ if(!pi){const t=(NEAR-prv[2])/(cur[2]-prv[2]); out.push(lerpP(prv,cur,t));} out.push(cur); }
+      else if(pi){ const t=(NEAR-prv[2])/(cur[2]-prv[2]); out.push(lerpP(prv,cur,t)); } }
+    return out.length>=3?out:null;
+  }
+  function strokeSegW(aw,bw,r,g,b,width,alpha,glow){
+    const cc=clipSeg(toCam(aw),toCam(bw)); if(!cc) return;
+    const A=proj(cc[0]), B=proj(cc[1]);
+    const f=Math.min(fogA(cc[0][2]),fogA(cc[1][2]))*alpha; if(f<=0.01) return;
+    ctx.strokeStyle=`rgba(${r},${g},${b},${f})`; ctx.lineWidth=width;
+    if(glow){ctx.shadowColor=`rgba(${r},${g},${b},${f})`;ctx.shadowBlur=glow;} else {ctx.shadowBlur=0;}
+    ctx.beginPath(); ctx.moveTo(A[0],A[1]); ctx.lineTo(B[0],B[1]); ctx.stroke(); ctx.shadowBlur=0;
+  }
+
+  function drawFloorGrid(){
+    ctx.globalCompositeOperation='lighter';
+    const zs=[-SEP*1.7,-SEP,0,SEP,SEP*1.7];
+    for(const z of zs) strokeSegW([XSTART,FLOORY,z],[XEND,FLOORY,z], 90,150,200, 1, .16, 0);
+    for(const y of YEARS) strokeSegW([Xw(y),FLOORY,-SEP*1.7],[Xw(y),FLOORY,SEP*1.7], 90,150,200, 1, (y%2?.10:.18), 0);
+    // faint horizontal reference rules at value ticks (back & front edges)
+    for(const v of VTICKS){
+      for(const z of [-SEP*1.7,SEP*1.7]) strokeSegW([XSTART,Yw(v),z],[XEND,Yw(v),z], 0,240,255, 1, .12, 0);
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+
+  function drawWalls(){
+    const quads=[];
+    for(const s of SERIES){
+      for(let i=0;i<NL-1;i++){
+        const x0=Xw(YEARS[i]), x1=Xw(YEARS[i+1]);
+        const y0=Yw(s.vals[i]), y1=Yw(s.vals[i+1]);
+        const poly=[ [x0,y0,s.z],[x1,y1,s.z],[x1,FLOORY,s.z],[x0,FLOORY,s.z] ].map(toCam);
+        const cp=clipPoly(poly); if(!cp) continue;
+        let cz=0; for(const p of cp) cz+=p[2]; cz/=cp.length;
+        quads.push({cp,cz,col:s.col});
+      }
+    }
+    quads.sort((a,b)=>b.cz-a.cz);
+    for(const q of quads){
+      const pts=q.cp.map(proj), f=fogA(q.cz), [r,g,b]=q.col;
+      let grad; try{ grad=ctx.createLinearGradient(0,Math.min(...pts.map(p=>p[1])),0,Math.max(...pts.map(p=>p[1]))); }catch(e){ grad=null; }
+      if(grad){ grad.addColorStop(0,`rgba(${r},${g},${b},${.30*f})`); grad.addColorStop(1,`rgba(${r},${g},${b},${.02*f})`); ctx.fillStyle=grad; }
+      else ctx.fillStyle=`rgba(${r},${g},${b},${.14*f})`;
+      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function drawRibbons(){
+    ctx.globalCompositeOperation='lighter'; ctx.lineJoin='round'; ctx.lineCap='round';
+    for(const s of SERIES){ const [r,g,b]=s.col;
+      for(let i=0;i<NL-1;i++){
+        strokeSegW([Xw(YEARS[i]),Yw(s.vals[i]),s.z],[Xw(YEARS[i+1]),Yw(s.vals[i+1]),s.z], r,g,b, 3.2, .95, reduce?0:14);
+        strokeSegW([Xw(YEARS[i]),Yw(s.vals[i]),s.z],[Xw(YEARS[i+1]),Yw(s.vals[i+1]),s.z], 255,255,255, 1.1, .5, 0);
+      }
+      for(let i=0;i<NL;i++){
+        const c=toCam([Xw(YEARS[i]),Yw(s.vals[i]),s.z]); if(c[2]<NEAR) continue;
+        const P=proj(c), f=fogA(c[2]); if(f<=0.02) continue;
+        const rad=Math.max(1.5, 26/c[2]);
+        ctx.fillStyle=`rgba(${r},${g},${b},${.95*f})`; ctx.shadowColor=`rgba(${r},${g},${b},${f})`; ctx.shadowBlur=reduce?0:10;
+        ctx.beginPath(); ctx.arc(P[0],P[1],rad,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+      }
+    }
+    // highlight: 化学(chem) surge at 2022 peak (green pulse) — why the total holds
+    const ci=YEARS.indexOf(2022);
+    const c=toCam([Xw(2022),Yw(CHEM[ci]),0]);
+    if(c[2]>=NEAR){
+      const P=proj(c), f=fogA(c[2]); const pr=(Date.now()%1600)/1600; const rr=(reduce?6:(6+pr*16));
+      ctx.strokeStyle=`rgba(52,211,153,${(reduce?.8:(1-pr))*f})`; ctx.lineWidth=2; ctx.shadowColor='rgba(52,211,153,.8)'; ctx.shadowBlur=reduce?0:12;
+      ctx.beginPath(); ctx.arc(P[0],P[1],rr,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0;
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+
+  // vertical value scale (億円) at front-left
+  function drawValueAxis(){
+    ctx.globalCompositeOperation='lighter';
+    const ax=XSTART, az=-SEP*1.7;
+    strokeSegW([ax,Yw(500),az],[ax,Yw(VMAX),az], 0,240,255, 1.4, .55, 4);
+    ctx.font="600 12px 'Share Tech Mono',monospace"; ctx.textAlign='right'; ctx.textBaseline='middle';
+    VTICKS.forEach(v=>{
+      const c=toCam([ax,Yw(v),az]); if(c[2]<NEAR) return;
+      const P=proj(c), f=fogA(c[2]); if(f<=0.05) return;
+      const P2=proj(toCam([ax+6,Yw(v),az]));
+      ctx.strokeStyle=`rgba(0,240,255,${.6*f})`; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(P[0],P[1]); ctx.lineTo(P2[0],P2[1]); ctx.stroke();
+      ctx.fillStyle=`rgba(150,190,220,${.85*f})`; ctx.fillText(v.toLocaleString(), P[0]-7, P[1]);
+    });
+    const cap=toCam([ax,Yw(VMAX)+10,az]);
+    if(cap[2]>=NEAR){const P=proj(cap),f=fogA(cap[2]); if(f>0.1){ ctx.textAlign='left'; ctx.fillStyle=`rgba(150,190,220,${.9*f})`; ctx.font="600 11px 'Share Tech Mono',monospace"; ctx.fillText('製造品出荷額（億円）', P[0]-4, P[1]); }}
+    ctx.textBaseline='alphabetic'; ctx.textAlign='start'; ctx.globalCompositeOperation='source-over';
+  }
+
+  function drawSeriesLabels(){
+    ctx.globalCompositeOperation='lighter'; ctx.textBaseline='middle'; ctx.textAlign='left';
+    const ends=[
+      {s:SERIES[0], t:'食料品 '+FOOD[LAST].toLocaleString()},
+      {s:SERIES[1], t:'化学 '+CHEM[LAST].toLocaleString()},
+      {s:SERIES[2], t:'電子部品 '+ELEC[LAST].toLocaleString()}
+    ];
+    for(const e of ends){
+      const c=toCam([Xw(2022)+5, Yw(e.s.vals[LAST]), e.s.z]); if(c[2]<NEAR) continue;
+      const P=proj(c), f=fogA(c[2]); if(f<=0.06) continue; const [r,g,b]=e.s.col;
+      ctx.font="700 12px 'Share Tech Mono',monospace"; ctx.fillStyle=`rgba(${r},${g},${b},${.95*f})`; ctx.fillText(e.t, P[0]+5, P[1]);
+    }
+    // chem surge callout
+    const cs=toCam([Xw(2022), Yw(CHEM[LAST])-9, 0]);
+    if(cs[2]>=NEAR){const P=proj(cs),f=fogA(cs[2]); if(f>0.06){ ctx.textAlign='center'; ctx.fillStyle=`rgba(52,211,153,${.95*f})`; ctx.font="700 12px 'Share Tech Mono',monospace"; ctx.fillText('▲ 化学 急伸', P[0], P[1]); }}
+    ctx.textBaseline='alphabetic'; ctx.textAlign='start'; ctx.globalCompositeOperation='source-over';
+  }
+
+  function drawLabels(){
+    ctx.globalCompositeOperation='lighter';
+    ctx.font="600 12px 'Share Tech Mono',monospace"; ctx.textAlign='center';
+    for(const y of YEARS){ if(y%2 && y!==2021) continue;
+      const c=toCam([Xw(y),FLOORY-4,0]); if(c[2]<NEAR) continue;
+      const P=proj(c), f=fogA(c[2]); if(f<=0.05) continue;
+      ctx.fillStyle=`rgba(127,168,200,${.85*f})`; ctx.fillText("'"+String(y).slice(2), P[0], P[1]);
+    }
+    // AKM fire marker (neutral, not a collapse in money terms)
+    strokeSegW([Xw(FIRE),FLOORY,SEP],[Xw(FIRE),Yw(VMAX*0.9),SEP], 244,114,182, 1.3, .5, 4);
+    const c=toCam([Xw(FIRE),Yw(VMAX*0.92),SEP]);
+    if(c[2]>=NEAR){const P=proj(c),f=fogA(c[2]); if(f>0.1){ ctx.fillStyle=`rgba(244,114,182,${.95*f})`; ctx.font="600 11px 'Share Tech Mono',monospace"; ctx.fillText("// 2020.10 AKM火災", P[0], P[1]); }}
+    ctx.globalCompositeOperation='source-over'; ctx.textAlign='start';
+  }
+
+  function bgFill(){
+    const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#05070e'); g.addColorStop(.55,'#06070f'); g.addColorStop(1,'#04050a');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    const hg=ctx.createRadialGradient(W/2,H*0.52,10,W/2,H*0.52,H*0.8); hg.addColorStop(0,'rgba(0,240,255,.05)'); hg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=hg; ctx.fillRect(0,0,W,H);
+  }
+
+  // ---- HUD ----
+  const hudYear=document.getElementById('hudYear');
+  const vFood=document.getElementById('vFood'), vChem=document.getElementById('vChem'),
+        vElec=document.getElementById('vElec'), vChemA=document.getElementById('vChemA');
+  function interp(arr,yr){
+    if(yr<=YEARS[0])return arr[0]; if(yr>=YEARS[NL-1])return arr[NL-1];
+    const i=Math.floor(yr)-YEARS[0]; const t=yr-Math.floor(yr); return arr[i]+(arr[i+1]-arr[i])*t;
+  }
+  function updateHUD(){
+    if(flightPhase){
+      const yr=Math.max(2013,Math.min(2021.99, eye[0]/UX+2017.5));
+      hudYear.textContent=Math.round(yr);
+      const f=interp(FOOD,yr),ch=interp(CHEM,yr),e=interp(ELEC,yr);
+      vFood.textContent=Math.round(f).toLocaleString(); vChem.textContent=Math.round(ch).toLocaleString(); vElec.textContent=Math.round(e).toLocaleString();
+      vChemA.textContent = yr>=2020.5 ? '▲ 急伸' : '';
+    } else { hudYear.textContent = ended ? '全景 ⟲' : '全景'; vFood.textContent='–'; vChem.textContent='–'; vElec.textContent='–'; vChemA.textContent=''; }
+  }
+
+  // ---- loop ----
+  let last=performance.now();
+  function frame(now){
+    const dt=Math.min(0.05,(now-last)/1000); last=now;
+    if(!paused && !ended){ T+=TL_RATE*speedMul*dt; if(T>=1){ T=1; ended=true; setEnded(); } }
+    updateCamera(); bgFill(); drawFloorGrid(); drawValueAxis(); drawWalls(); drawRibbons(); drawLabels(); drawSeriesLabels(); updateHUD();
+  }
+
+  // ---- interaction ----
+  let dragging=false,lx=0,ly=0;
+  cv.addEventListener('pointerdown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{ if(!dragging)return;
+    targetYaw += (e.clientX-lx)*0.0042; targetPitch += (e.clientY-ly)*0.0042;
+    targetYaw=Math.max(-1.0,Math.min(1.0,targetYaw)); targetPitch=Math.max(-0.8,Math.min(0.8,targetPitch));
+    lx=e.clientX; ly=e.clientY; });
+  window.addEventListener('pointerup',()=>{dragging=false;});
+  cv.addEventListener('wheel',e=>{e.preventDefault(); speedMul=Math.max(0.25,Math.min(4,speedMul*(e.deltaY>0?0.85:1.18))); syncSpeed();},{passive:false});
+
+  const btnPlay=document.getElementById('btnPlay'), btnSlow=document.getElementById('btnSlow'), btnReset=document.getElementById('btnReset');
+  function setEnded(){ btnPlay.textContent='↻ REPLAY'; btnPlay.classList.remove('on'); }
+  function setPaused(p){ if(ended) return; paused=p; btnPlay.textContent=p?'▶ PLAY':'❚❚ PAUSE'; btnPlay.classList.toggle('on',!p); }
+  function replay(){ T=0; ended=false; paused=false; userYaw=targetYaw=userPitch=targetPitch=0; btnPlay.textContent='❚❚ PAUSE'; btnPlay.classList.add('on'); }
+  function primaryAction(){ if(ended) replay(); else setPaused(!paused); }
+  function syncSpeed(){btnSlow.textContent='SPEED ×'+ (speedMul<1?speedMul.toFixed(2):speedMul.toFixed(1)).replace(/\.0$/,'');}
+  btnPlay.addEventListener('click',primaryAction);
+  btnSlow.addEventListener('click',()=>{const steps=[0.5,1,2,3]; let i=steps.findIndex(s=>s>=speedMul-1e-6); i=(i+1)%steps.length; speedMul=steps[i]; syncSpeed();});
+  btnReset.addEventListener('click',()=>{targetYaw=0;targetPitch=0;});
+  window.addEventListener('keydown',e=>{ if(!__running) return; if(e.code==='Space'){e.preventDefault();primaryAction();} if(e.key==='r'||e.key==='R'){targetYaw=0;targetPitch=0;} });
+
+  var __running=false, __raf=null;
+  function loop(now){ if(!__running) return; frame(now); __raf=requestAnimationFrame(loop); }
+  window.__fly={
+    start:function(){ if(__running) return; __running=true; resize(); replay(); last=performance.now(); __raf=requestAnimationFrame(loop); },
+    stop:function(){ __running=false; if(__raf) cancelAnimationFrame(__raf); __raf=null; },
+    active:function(){ return __running; }
+  };
+  syncSpeed();
+})();
+</script>
+
+<!-- ===== 2D chart (Panel A + B) + view toggle ===== -->
+<script>
+(function(){
+  const YEARS=[2013,2014,2015,2016,2017,2018,2019,2020,2021,2022];
+  const PREF=[14476,15276,15657,16166,16917,17140,16346,16368,17131,18195];
+  const NOB={2015:2852,2020:2946,2021:3645,2022:3955};
+  const SHARE={2015:18.2,2020:18.0,2021:21.3,2022:21.7};
+  const CHEM=[1448,1512,1675,1462,1675,1756,1521,1276,1858,1927];
+  const ELEC=[1461,1614,1640,1666,1846,1841,1742,1850,1657,2096];
+  const FOOD=[2946,3170,3276,3675,3826,3644,3252,3698,3934,4184];
+  const NS="http://www.w3.org/2000/svg";
+  function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+  function tx(p,x,y,s,a){const t=el("text",Object.assign({x,y},a||{}),p);t.textContent=s;return t;}
+  function glow(svg){const d=el("defs",{},svg);const f=el("filter",{id:svg.id+"_g",x:"-30%",y:"-30%",width:"160%",height:"160%"},d);el("feGaussianBlur",{stdDeviation:"2.2",result:"b"},f);const m=el("feMerge",{},f);el("feMergeNode",{in:"b"},m);el("feMergeNode",{in:"SourceGraphic"},m);return "url(#"+svg.id+"_g)";}
+
+  (function(){ // Panel A
+    const svg=document.getElementById("cA"); if(!svg) return; const G=glow(svg);
+    const W=920,H=460,M={l:62,r:64,t:24,b:42}; const X0=M.l,X1=W-M.r,Y0=M.t,Y1=H-M.b;
+    const xOf=y=>X0+(X1-X0)*((y-2013)/(2022-2013));
+    const yMax=20000,yOf=v=>Y1-(Y1-Y0)*((v-0)/(yMax-0));
+    const sMax=30,sOf=v=>Y1-(Y1-Y0)*((v-0)/(sMax-0));
+    [0,5000,10000,15000,20000].forEach(v=>{el("line",{x1:X0,y1:yOf(v),x2:X1,y2:yOf(v),stroke:"var(--line)"},svg);tx(svg,X0-8,yOf(v)+4,(v/10000).toFixed(1)+"兆",{"text-anchor":"end","font-size":"11",fill:"#7e8aaa"});});
+    YEARS.forEach(y=>{if(y%2===1)return;tx(svg,xOf(y),Y1+20,"'"+String(y).slice(2),{"text-anchor":"middle","font-size":"11",fill:"#7e8aaa"});});
+    [10,20,30].forEach(v=>tx(svg,X1+8,sOf(v)+4,v+"%",{"font-size":"10",fill:"var(--share)"}));
+    el("line",{x1:xOf(2020),y1:Y0,x2:xOf(2020),y2:Y1,stroke:"var(--elec)","stroke-width":1.2,"stroke-dasharray":"4 4",opacity:.5},svg);
+    tx(svg,xOf(2020)-5,Y0+12,"AKM火災 2020.10",{"font-size":"11",fill:"#f472b6","text-anchor":"end"});
+    const g=el("g",{filter:G},svg); let d=""; YEARS.forEach((y,i)=>{d+=(i?"L":"M")+xOf(y)+" "+yOf(PREF[i])+" ";});
+    el("path",{d,fill:"none",stroke:"var(--ken)","stroke-width":3,"stroke-linejoin":"round"},g);
+    YEARS.forEach((y,i)=>el("circle",{cx:xOf(y),cy:yOf(PREF[i]),r:2.6,fill:"var(--ken)"},svg));
+    tx(svg,xOf(2022)-2,yOf(18195)-12,"県 18,195",{"font-size":"11",fill:"var(--ken)","text-anchor":"end","font-weight":"700"});
+    const ny=[2015,2020,2021,2022];
+    el("path",{d:`M${xOf(2015)} ${yOf(NOB[2015])} L${xOf(2020)} ${yOf(NOB[2020])}`,fill:"none",stroke:"var(--nob)","stroke-width":3},svg);
+    el("path",{d:`M${xOf(2020)} ${yOf(NOB[2020])} L${xOf(2021)} ${yOf(NOB[2021])}`,fill:"none",stroke:"var(--nob)","stroke-width":2,"stroke-dasharray":"4 4",opacity:.6},svg);
+    el("path",{d:`M${xOf(2021)} ${yOf(NOB[2021])} L${xOf(2022)} ${yOf(NOB[2022])}`,fill:"none",stroke:"var(--nob)","stroke-width":3},svg);
+    ny.forEach(y=>el("circle",{cx:xOf(y),cy:yOf(NOB[y]),r:4.5,fill:"var(--nob)",stroke:"#0b0e18","stroke-width":1.5},svg));
+    tx(svg,xOf(2015)+4,yOf(NOB[2015])+20,"延岡 2,852",{"font-size":"11",fill:"var(--nob)","font-weight":"700"});
+    tx(svg,xOf(2022)+2,yOf(NOB[2022])-10,"3,955",{"font-size":"11",fill:"var(--nob)","text-anchor":"end","font-weight":"700"});
+    ny.forEach(y=>{el("circle",{cx:xOf(y),cy:sOf(SHARE[y]),r:3.5,fill:"var(--share)"},svg);tx(svg,xOf(y),sOf(SHARE[y])-8,SHARE[y]+"%",{"font-size":"10",fill:"var(--share)","text-anchor":"middle"});});
+    el("path",{d:`M${xOf(2015)} ${sOf(18.2)} L${xOf(2020)} ${sOf(18.0)} L${xOf(2021)} ${sOf(21.3)} L${xOf(2022)} ${sOf(21.7)}`,fill:"none",stroke:"var(--share)","stroke-width":1.4,"stroke-dasharray":"2 3",opacity:.8},svg);
+  })();
+
+  (function(){ // Panel B
+    const svg=document.getElementById("cB"); if(!svg) return; const G=glow(svg);
+    const W=920,H=420,M={l:54,r:80,t:22,b:40}; const X0=M.l,X1=W-M.r,Y0=M.t,Y1=H-M.b;
+    const xOf=y=>X0+(X1-X0)*((y-2013)/(2022-2013));
+    const yMax=4500,yOf=v=>Y1-(Y1-Y0)*((v-0)/(yMax-0));
+    [0,1000,2000,3000,4000].forEach(v=>{el("line",{x1:X0,y1:yOf(v),x2:X1,y2:yOf(v),stroke:"var(--line)"},svg);tx(svg,X0-8,yOf(v)+4,(v).toLocaleString(),{"text-anchor":"end","font-size":"10",fill:"#7e8aaa"});});
+    YEARS.forEach(y=>{if(y%2===1)return;tx(svg,xOf(y),Y1+20,"'"+String(y).slice(2),{"text-anchor":"middle","font-size":"11",fill:"#7e8aaa"});});
+    tx(svg,X0-8,Y0-7,"億円",{"text-anchor":"end","font-size":"10",fill:"#6b7a90"});
+    el("line",{x1:xOf(2020),y1:Y0,x2:xOf(2020),y2:Y1,stroke:"var(--elec)","stroke-width":1.2,"stroke-dasharray":"4 4",opacity:.45},svg);
+    tx(svg,xOf(2020)+4,Y0+12,"2020.10 火災",{"font-size":"10",fill:"#f472b6"});
+    function ln(arr,color,w){const g=el("g",{filter:G},svg);let d="";YEARS.forEach((y,i)=>{d+=(i?"L":"M")+xOf(y)+" "+yOf(arr[i])+" ";});el("path",{d,fill:"none",stroke:color,"stroke-width":w||2.6,"stroke-linejoin":"round"},g);}
+    ln(FOOD,"var(--food)",2.6); ln(CHEM,"var(--chem)",3); ln(ELEC,"var(--elec)",3);
+    tx(svg,xOf(2022)+6,yOf(FOOD[9])+4,"食料品 4,184",{"font-size":"10",fill:"var(--food)","font-weight":"700"});
+    tx(svg,xOf(2022)+6,yOf(CHEM[9])+4,"化学 1,927",{"font-size":"10",fill:"var(--chem)","font-weight":"700"});
+    tx(svg,xOf(2022)+6,yOf(ELEC[9])-3,"電子 2,096",{"font-size":"10",fill:"var(--elec)","font-weight":"700"});
+    el("circle",{cx:xOf(2020),cy:yOf(CHEM[7]),r:4.5,fill:"none",stroke:"var(--chem)","stroke-width":1.5},svg);
+    tx(svg,xOf(2020)-6,yOf(CHEM[7])+18,"1,276",{"font-size":"10",fill:"var(--chem)","text-anchor":"end"});
+  })();
+
+  // toggle
+  const v2=document.getElementById('view2d'), v3=document.getElementById('view3d');
+  const b3=document.getElementById('to3d'), b2=document.getElementById('to2d'), note=document.getElementById('viewNote');
+  b3.addEventListener('click',()=>{ v2.style.display='none'; v3.style.display='block'; b3.style.display='none'; b2.style.display='inline-flex'; note.textContent='VIEW: 3D FLIGHT'; if(window.__fly) window.__fly.start(); });
+  b2.addEventListener('click',()=>{ if(window.__fly) window.__fly.stop(); v3.style.display='none'; v2.style.display='block'; b2.style.display='none'; b3.style.display='inline-flex'; note.textContent='VIEW: 2D LINE CHART'; });
+})();
+</script>
+</body>
+</html>

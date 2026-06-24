@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宮崎のお金の循環 — 鳥の流れで見る地域経済 | KR works LLC</title>
+<meta name="description" content="宮崎県の産業連関表（令和2年）にもとづく財・サービスの需給循環（総供給＝総需要、Y＋M＝C＋I＋X）を鳥の群れの流れで可視化した教育・演出デモ。帯の太さ＝群れの密度＝金額。公知の図法のみ、ブラウザ内完結で、予測ではありません。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080c; --bg2:#0c0e16; --cyan:#00f0ff; --cyanG:rgba(0,240,255,.45);
+    --blue:#2463ff; --soft:#b6c4d6; --faint:#6b7a90; --ink:#e0e6ef; --bd:rgba(0,240,255,.14);
+    --accent:#f59e0b; --accentG:rgba(245,158,11,.45);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{background:var(--bg);color:var(--ink);font-family:'M PLUS 1',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+
+  #krw-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 clamp(16px,3vw,34px);background:rgba(7,8,12,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);}
+  #krw-nav .logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:17px;letter-spacing:2px;color:#fff;text-decoration:none;}
+  #krw-nav .logo span{color:var(--cyan);text-shadow:0 0 18px var(--cyanG);}
+  #krw-nav .navset{display:flex;align-items:center;gap:18px;}
+  #krw-nav .lnk{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);text-decoration:none;transition:.2s;}
+  #krw-nav .lnk:hover{color:var(--cyan);text-shadow:0 0 12px var(--cyanG);}
+  #krw-nav .home{font-family:'Orbitron',sans-serif;font-weight:500;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;padding:9px 20px;border-radius:8px;box-shadow:0 0 22px -3px var(--cyanG);transition:transform .15s,box-shadow .15s;}
+  #krw-nav .home:hover{transform:translateY(-2px);box-shadow:0 0 34px -2px rgba(0,240,255,.75);color:#07080c;}
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,var(--cyan),var(--blue));text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media(prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  #stage{position:relative;width:100%;height:calc(100vh - 56px);overflow:hidden;
+    background:
+      radial-gradient(130% 90% at 50% -10%, rgba(245,158,11,.06) 0%, rgba(7,8,12,0) 52%),
+      linear-gradient(180deg,#07080e 0%,#090b14 60%,#0b0e18 100%);}
+  #stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:1;}
+  #stage .fxgrid{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(rgba(0,240,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.05) 1px,transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(125% 85% at 50% 42%,#000 28%,transparent 80%);mask-image:radial-gradient(125% 85% at 50% 42%,#000 28%,transparent 80%);
+    animation:fxGridDrift 20s linear infinite;}
+  #stage .fxscan{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0px,rgba(255,255,255,.04) 1px,transparent 1px,transparent 3px);}
+  @keyframes fxGridDrift{0%{background-position:0 0,0 0;}100%{background-position:46px 0,0 46px;}}
+  #stage.nofx .fxgrid,#stage.nofx .fxscan{display:none;}
+  @media(prefers-reduced-motion:reduce){#stage .fxgrid{animation:none;}}
+
+  #stage .head{position:absolute;top:clamp(14px,2.4vw,26px);left:clamp(16px,3vw,34px);right:clamp(16px,3vw,34px);z-index:5;pointer-events:none;max-width:58ch;}
+  #stage .ey{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);opacity:.9;margin-bottom:.6em;}
+  #stage h1{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.2rem,.9rem+1.4vw,1.9rem);letter-spacing:.01em;line-height:1.3;color:#fff;margin-bottom:.5em;text-shadow:0 2px 26px rgba(0,0,0,.6);}
+  #stage .sub{font-size:clamp(.78rem,.74rem+.2vw,.9rem);line-height:1.75;color:var(--soft);}
+  #stage .sub b{color:#fff;font-weight:500;}
+  #stage .honest{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 13px;border:1px solid var(--bd);border-radius:999px;background:rgba(245,158,11,.06);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.05em;color:var(--soft);pointer-events:auto;}
+  #stage .honest .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);flex:none;}
+  #stage .honest button{appearance:none;border:none;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:0;}
+
+  #stage .stat{position:absolute;top:clamp(14px,2.4vw,26px);right:clamp(16px,3vw,34px);z-index:5;text-align:right;pointer-events:none;}
+  #stage .stat .pk{font-family:'Share Tech Mono',monospace;font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);}
+  #stage .stat .pv{font-family:'Orbitron',sans-serif;font-weight:500;font-size:clamp(1.2rem,.9rem+1.4vw,2rem);color:var(--accent);text-shadow:0 0 18px var(--accentG);margin-top:2px;}
+  #stage .stat .pv2{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--soft);margin-top:4px;line-height:1.55;}
+  @media(max-width:760px){#stage .stat{display:none;}#stage .head{max-width:none;}}
+
+  #stage .tip{position:absolute;z-index:8;pointer-events:none;display:none;padding:7px 11px;border:1px solid var(--bd);border-radius:8px;background:rgba(9,12,20,.94);font-size:.74rem;color:var(--ink);white-space:nowrap;box-shadow:0 6px 24px -8px #000;}
+  #stage .tip b{color:var(--accent);font-weight:500;}
+
+  #stage .ctrl{position:absolute;left:50%;bottom:clamp(14px,2.4vw,26px);transform:translateX(-50%);z-index:6;width:min(95%,940px);
+    display:flex;flex-direction:column;gap:11px;padding:12px 16px;border:1px solid var(--bd);border-radius:14px;background:rgba(9,12,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #stage .crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  #stage .leg{display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--soft);}
+  #stage .leg i{width:10px;height:10px;border-radius:2px;flex:none;}
+  #stage .chip,#stage .tog{appearance:none;border:1px solid var(--bd);background:rgba(255,255,255,.03);color:var(--soft);font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.03em;padding:.46em .85em;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap;}
+  #stage .chip:hover,#stage .tog:hover{color:#fff;border-color:var(--accent);background:rgba(245,158,11,.1);}
+  #stage .tog[aria-pressed="true"]{color:#07080c;background:var(--accent);border-color:var(--accent);}
+  #stage .play{appearance:none;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--accent);background:rgba(245,158,11,.12);color:var(--accent);font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:.18s;flex:none;}
+  #stage .play:hover{background:rgba(245,158,11,.22);box-shadow:0 0 18px -4px var(--accentG);}
+  #stage .yr{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.06em;color:var(--soft);}
+  #stage .yr b{color:var(--accent);font-weight:400;}
+  #stage .spacer{flex:1;}
+
+  #stage .modal{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,12,.74);backdrop-filter:blur(4px);}
+  #stage .modal[open]{display:flex;}
+  #stage .card{max-width:640px;max-height:84vh;overflow:auto;border:1px solid var(--bd);border-radius:14px;background:var(--bg2);padding:26px 28px;box-shadow:0 0 60px -10px var(--accentG);}
+  #stage .card h2{font-family:'Orbitron',sans-serif;font-weight:500;font-size:1.05rem;color:var(--accent);letter-spacing:.04em;margin-bottom:14px;}
+  #stage .card p{font-size:.84rem;line-height:1.9;color:var(--soft);margin-bottom:12px;}
+  #stage .card p b{color:#fff;font-weight:500;}
+  #stage .card ul{margin:0 0 14px;padding-left:1.1em;}
+  #stage .card li{font-size:.82rem;line-height:1.85;color:var(--soft);margin-bottom:3px;}
+  #stage .card li b{color:#fff;font-weight:500;}
+  #stage .card code{font-family:'Share Tech Mono',monospace;font-size:.82rem;color:var(--accent);}
+  #stage .card .x{appearance:none;border:1px solid var(--accent);background:rgba(245,158,11,.12);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;padding:.6em 1.4em;border-radius:8px;cursor:pointer;}
+  #stage .card .x:hover{background:rgba(245,158,11,.22);}
+  #stage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<nav id="krw-nav">
+  <a href="index.html" class="logo">KR<span>works</span></a>
+  <div class="navset">
+    <a href="demos.html" class="lnk">Gallery</a>
+    <a href="index.html" class="home">&#8592; Home</a>
+  </div>
+</nav>
+
+<div id="stage">
+  <div class="fxgrid" aria-hidden="true"></div>
+  <canvas aria-label="宮崎県の産業連関表（令和2年）のマクロ循環を、鳥の群れの流れで可視化した教育・演出デモ。"></canvas>
+  <div class="fxscan" aria-hidden="true"></div>
+
+  <header class="head">
+    <p class="ey">宮崎県 産業連関分析 ／ 財・サービスの需給循環</p>
+    <h1>宮崎県経済の需給循環 ─ 総供給＝総需要の均衡を流れで見る</h1>
+    <p class="sub">産業連関表では<b>総供給（県内生産額＋移輸入）＝総需要（中間需要＋県内最終需要＋移輸出）</b>が恒等的に成立します。最終需要は<b>民間消費C・投資I・政府支出G</b>へ配分。鳥の<b>密度は金額</b>に対応し、需給均衡 <b>Y＋M＝C＋I＋X</b> の循環構造を表します。</p>
+    <span class="honest"><i class="dot"></i>産業連関表（実数）にもとづく可視化 ／ 演出を含み、予測・因果推論は行いません<button data-act="about">出典・仕組み</button></span>
+  </header>
+
+  <div class="stat" aria-live="polite">
+    <div class="pk">総供給 ＝ 総需要</div>
+    <div class="pv">93,281 億円</div>
+    <div class="pv2">令和2年(2020) 産業連関表 ／ 単位：億円</div>
+  </div>
+
+  <div class="tip" data-tip></div>
+
+  <div class="ctrl" role="group" aria-label="操作・凡例">
+    <div class="crow" data-legend></div>
+    <div class="crow">
+      <button class="play" data-act="play" aria-label="一時停止" aria-pressed="true">&#10074;&#10074;</button>
+      <button class="tog" data-act="ribbon" aria-pressed="true">経路を表示</button>
+      <button class="tog" data-act="cyber" aria-pressed="true">サイバー演出</button>
+      <span class="yr">年　<b>令和2年 (2020)</b></span>
+      <span class="spacer"></span>
+    </div>
+  </div>
+
+  <div class="modal" data-modal>
+    <div class="card" role="dialog" aria-modal="true" aria-label="この可視化の仕組みと出典">
+      <h2>産業連関表の需給均衡を、鳥の群れで</h2>
+      <p>産業連関表では、地域に出回る財・サービスについて <b>総供給＝総需要</b> が成り立ちます（定義による恒等式）。供給は「県内生産額＋移輸入」、需要は「中間需要＋県内最終需要＋移輸出」。これを言い換えたのが <code>Y＋M＝C＋I＋X</code> です。</p>
+      <ul>
+        <li>鳥は左の<b>県内生産額・移輸入</b>から出発し、<b>総供給</b>に集まって、<b>中間需要・最終需要・移輸出</b>へ分かれます。最終需要はさらに<b>民間消費・一般政府・総固定資本形成</b>などへ。</li>
+        <li>各経路を流れる<b>鳥の密度＝金額</b>（サンキーの帯の太さに対応）。終端に着いた鳥は源へ戻り、<b>循環</b>し続けます。</li>
+        <li>「経路を表示」で、下じきのサンキー帯を出し入れできます。</li>
+      </ul>
+      <p>「総供給＝総需要」は<b>定義による恒等式</b>で、本デモはこの<b>需給構造の説明</b>に用いるものです。鳥の<b>動きは演出</b>で、実際の取引経路や因果関係を示すものではありません。金額は<b>億円未満を四捨五入</b>。<b>出典：</b>宮崎県「令和2年（2020年）産業連関表」15部門表。当社が可視化用に加工。</p>
+      <p>本デモは<b>教育・演出目的</b>で、当社の特許関連の技術・製品とは<b>無関係</b>です。すべてブラウザ内で動作し、<b>データの外部送信はありません</b>（表示用フォントのみ外部から取得）。</p>
+      <p style="text-align:right;margin:0"><button class="x" data-act="close">閉じる</button></p>
+    </div>
+  </div>
+</div>
+
+<a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+<script>
+(function(){
+  const root=document.getElementById("stage");
+  const canvas=root.querySelector("canvas");
+  const ctx=canvas.getContext("2d");
+  const tipEl=root.querySelector('[data-tip]');
+  const REDUCE=!!(window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches);
+
+  /* ── データ（実数／出典：宮崎県「令和2年産業連関表」15部門表）── 単位：億円。億円未満四捨五入。 */
+  const NODES=[
+    {id:"prod",   name:"県内生産額",   col:0, c:[245,158,11]},
+    {id:"import", name:"移輸入",       col:0, c:[56,189,248]},
+    {id:"supply", name:"総供給＝総需要", col:1, c:[148,163,184]},
+    {id:"inter",  name:"中間需要",     col:2, c:[167,139,250]},
+    {id:"final",  name:"県内最終需要", col:2, c:[52,211,153]},
+    {id:"export", name:"移輸出",       col:2, c:[244,114,182]},
+    {id:"cons",   name:"民間消費 C",   col:3, c:[74,222,128]},
+    {id:"gov",    name:"一般政府 G",   col:3, c:[251,191,36]},
+    {id:"inv",    name:"総固定資本形成 I", col:3, c:[96,165,250]},
+    {id:"etc",    name:"家計外消費＋在庫", col:3, c:[148,163,184]}
+  ];
+  const LINKS=[
+    {s:"prod",  t:"supply", v:70173},
+    {s:"import",t:"supply", v:23108},
+    {s:"supply",t:"inter",  v:29498},
+    {s:"supply",t:"final",  v:44575},
+    {s:"supply",t:"export", v:19207},
+    {s:"final", t:"cons",   v:23083},
+    {s:"final", t:"gov",    v:11406},
+    {s:"final", t:"inv",    v:9549},
+    {s:"final", t:"etc",    v:537}
+  ];
+  const TOTAL=93281;
+  const N={}; NODES.forEach(n=>N[n.id]=n);
+  const fmt=v=>v.toLocaleString()+" 億円";
+  const pct=v=>(v/TOTAL*100).toFixed(1)+"%";
+
+  // 経路グラフ（鳥のルーティング用）
+  const outIdx={}; LINKS.forEach((l,i)=>{ (outIdx[l.s]=outIdx[l.s]||[]).push(i); });
+  const srcEdges=[]; LINKS.forEach((l,i)=>{ if(l.s==="prod"||l.s==="import") srcEdges.push(i); });
+  const isTerminal=id=>!outIdx[id];
+  function wpick(idxs){ let tot=0; for(const i of idxs) tot+=LINKS[i].v; let r=Math.random()*tot;
+    for(const i of idxs){ r-=LINKS[i].v; if(r<=0) return i; } return idxs[idxs.length-1]; }
+
+  let W=0,H=0,dpr=1,BW=14,cyber=true,playing=true,showRibbon=true,hoverNode=null;
+  let bandTop=0,bandBot=0;
+  let birds=[];
+  const NBIRD=860;
+
+  function layout(){
+    if(W<=0||H<=0) return;
+    const headEl=root.querySelector('.head');
+    const headBottom=headEl?(headEl.offsetTop+headEl.offsetHeight):H*0.34;
+    bandTop=headBottom+30; bandBot=H-Math.max(150,H*0.20);
+    if(bandBot-bandTop<140){ const m=(headBottom+(H-Math.max(150,H*0.20)))/2; bandTop=m-70; bandBot=m+70; }
+    const bandH=bandBot-bandTop, cols=4;
+    const xL=Math.max(74,W*0.13), xR=W-Math.max(96,W*0.13);
+    NODES.forEach(n=>{
+      const out=LINKS.filter(l=>l.s===n.id).reduce((a,l)=>a+l.v,0);
+      const inn=LINKS.filter(l=>l.t===n.id).reduce((a,l)=>a+l.v,0);
+      n.value=Math.max(out,inn,1); n.x=xL+(xR-xL)*(n.col/(cols-1));
+    });
+    const GAP=12; let maxSum=1;
+    for(let c=0;c<cols;c++){ const s=NODES.filter(n=>n.col===c).reduce((a,n)=>a+n.value,0); if(s>maxSum)maxSum=s; }
+    const scale=(bandH-GAP*3)/maxSum;
+    for(let c=0;c<cols;c++){ const cn=NODES.filter(n=>n.col===c);
+      let tot=cn.reduce((a,n)=>a+n.value*scale,0)+GAP*(cn.length-1), y=bandTop+(bandH-tot)/2;
+      for(const n of cn){ n.h=n.value*scale; n.y=y; y+=n.h+GAP; n.outOff=0; n.inOff=0; } }
+    const sorted=LINKS.map((l,i)=>i).sort((a,b)=> (N[LINKS[a].t].y-N[LINKS[b].t].y)||(N[LINKS[a].s].y-N[LINKS[b].s].y));
+    for(const i of sorted){ const l=LINKS[i], s=N[l.s], t=N[l.t];
+      l.th=l.v*scale; l.sx=s.x+BW/2; l.sy=s.y+s.outOff; s.outOff+=l.th;
+      l.tx=t.x-BW/2; l.ty=t.y+t.inOff; t.inOff+=l.th; }
+    for(const l of LINKS){ l._path=ribbonPath(l);
+      const scy=l.sy+l.th/2, tcy=l.ty+l.th/2, mx=(l.sx+l.tx)/2;
+      l._e={x0:l.sx,y0:scy,cx1:mx,cy1:scy,cx2:mx,cy2:tcy,x1:l.tx,y1:tcy,
+        th:l.th,c:N[l.s].c,len:Math.hypot(l.tx-l.sx,tcy-scy)+1}; }
+    buildBirds();
+  }
+  function ribbonPath(l){
+    const mx=(l.sx+l.tx)/2, p=new Path2D();
+    p.moveTo(l.sx,l.sy); p.bezierCurveTo(mx,l.sy,mx,l.ty,l.tx,l.ty);
+    p.lineTo(l.tx,l.ty+l.th); p.bezierCurveTo(mx,l.ty+l.th,mx,l.sy+l.th,l.sx,l.sy+l.th);
+    p.closePath(); return p;
+  }
+  function bez(e,u){ const m=1-u;
+    return [ m*m*m*e.x0+3*m*m*u*e.cx1+3*m*u*u*e.cx2+u*u*u*e.x1,
+             m*m*m*e.y0+3*m*m*u*e.cy1+3*m*u*u*e.cy2+u*u*u*e.y1 ]; }
+  function tan(e,u){ const m=1-u;
+    return [ 3*m*m*(e.cx1-e.x0)+6*m*u*(e.cx2-e.cx1)+3*u*u*(e.x1-e.cx2),
+             3*m*m*(e.cy1-e.y0)+6*m*u*(e.cy2-e.cy1)+3*u*u*(e.y1-e.cy2) ]; }
+
+  function spawnSource(b){ b.ei=wpick(srcEdges); b.u=Math.random(); init(b); b.skip=true; }
+  function init(b){ b.lane=(Math.random()-0.5)*0.9; b.wf=0.6+Math.random()*1.4; b.wp=Math.random()*6.28;
+    b.uspd=0.26+Math.random()*0.18; }
+  function buildBirds(){
+    birds=[];
+    for(let k=0;k<NBIRD;k++){ const b={px:0,py:0,skip:true}; b.ei=wpick(srcEdges); b.u=Math.random(); init(b); birds.push(b); }
+  }
+  function advance(b,dt){
+    b.u += b.uspd*dt;
+    while(b.u>=1){
+      b.u-=1; const node=LINKS[b.ei].t;
+      if(isTerminal(node)){ b.ei=wpick(srcEdges); b.skip=true; }
+      else { b.ei=wpick(outIdx[node]); b.skip=true; }
+      b.u=Math.random()*0.02; init2(b);
+    }
+  }
+  function init2(b){ b.lane=(Math.random()-0.5)*0.9; }
+
+  /* ── 背景演出 ── */
+  function drawBg(now){
+    if(!cyber) return;
+    const cg=ctx.createRadialGradient(W*0.5,(bandTop+bandBot)/2,40,W*0.5,(bandTop+bandBot)/2,W*0.55);
+    cg.addColorStop(0,"rgba(0,240,255,.04)"); cg.addColorStop(1,"rgba(0,240,255,0)");
+    ctx.fillStyle=cg; ctx.fillRect(0,0,W,H);
+    if(REDUCE) return;
+    const period=7000, ph=(now%period)/period, x=ph*(W+180)-90;
+    const g=ctx.createLinearGradient(x-78,0,x+78,0);
+    g.addColorStop(0,"rgba(0,240,255,0)"); g.addColorStop(.5,"rgba(0,240,255,.05)"); g.addColorStop(1,"rgba(0,240,255,0)");
+    ctx.fillStyle=g; ctx.fillRect(x-78,0,156,H);
+  }
+  function drawHud(now){
+    if(!cyber) return;
+    const m=18,L=REDUCE?26:(26+4*Math.sin(now/600));
+    ctx.strokeStyle="rgba(0,240,255,.5)"; ctx.lineWidth=1.5; ctx.lineCap="butt";
+    const cor=(x,y,dx,dy)=>{ctx.beginPath();ctx.moveTo(x,y+dy*L);ctx.lineTo(x,y);ctx.lineTo(x+dx*L,y);ctx.stroke();};
+    cor(m,m,1,1); cor(W-m,m,-1,1); cor(m,H-m,1,-1); cor(W-m,H-m,-1,-1);
+  }
+
+  let running=true,t=0,last=performance.now();
+  function frame(){
+    if(running){
+      const now=performance.now(); let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+      if(playing && !REDUCE) t+=dt;
+      ctx.clearRect(0,0,W,H);
+      drawBg(now);
+      // 下じきのサンキー帯
+      if(showRibbon){
+        for(const l of LINKS){ const c=N[l.s].c, dim=hoverNode&&!(l.s===hoverNode.id||l.t===hoverNode.id);
+          ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${dim?0.03:0.08})`; ctx.fill(l._path); }
+      }
+      // 鳥の流れ
+      ctx.lineCap="round";
+      if(cyber) ctx.globalCompositeOperation="lighter";
+      for(const b of birds){
+        if(playing && !REDUCE) advance(b,dt);
+        const l=LINKS[b.ei], e=l._e;
+        const p=bez(e,b.u), tg=tan(e,b.u), tl=Math.hypot(tg[0],tg[1])||1;
+        const nx=-tg[1]/tl, ny=tg[0]/tl;
+        const off=b.lane*e.th*0.82 + (cyber?5:3)*Math.sin(t*b.wf+b.wp);
+        const x=p[0]+nx*off, y=p[1]+ny*off;
+        const c=e.c, dim=hoverNode&&!(l.s===hoverNode.id||l.t===hoverNode.id);
+        if(b.skip){ b.px=x; b.py=y; b.skip=false; }
+        ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${dim?0.06:(cyber?0.9:0.6)})`;
+        ctx.lineWidth=cyber?1.7:1.3;
+        ctx.beginPath(); ctx.moveTo(b.px,b.py); ctx.lineTo(x,y); ctx.stroke();
+        b.px=x; b.py=y;
+      }
+      ctx.globalCompositeOperation="source-over";
+      // ノード＋ラベル
+      ctx.textBaseline="alphabetic";
+      for(const n of NODES){ const c=n.c, hot=hoverNode===n;
+        if(cyber){ ctx.save(); ctx.shadowColor=`rgba(${c[0]},${c[1]},${c[2]},.9)`; ctx.shadowBlur=hot?20:11; }
+        ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${hot?1:.92})`;
+        ctx.fillRect(n.x-BW/2,n.y,BW,Math.max(2,n.h));
+        if(cyber){ ctx.restore();
+          ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},.95)`;
+          ctx.fillRect(n.x-BW/2-2,n.y-2,BW+4,2); ctx.fillRect(n.x-BW/2-2,n.y+Math.max(2,n.h),BW+4,2); }
+        const lx=n.x+BW/2+8, tiny=n.h<14;
+        ctx.textAlign="left";
+        ctx.fillStyle="rgba(224,230,239,.96)"; ctx.font="600 12px 'M PLUS 1',sans-serif";
+        ctx.fillText(n.name, lx, n.y+(tiny?n.h/2+4:12));
+        if(!tiny){ ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},.95)`; ctx.font="500 11px 'Share Tech Mono',monospace";
+          ctx.fillText(fmt(n.value), lx, n.y+26); }
+      }
+      drawHud(now);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function resize(){
+    const r=root.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1,2);
+    W=r.width; H=r.height; canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    BW=Math.max(11,Math.min(16,W*0.012)); layout();
+  }
+
+  function buildLegend(){
+    const el=root.querySelector('[data-legend]'); if(!el) return;
+    const items=[N.prod,N.import,N.inter,N.final,N.export];
+    el.innerHTML=items.map(n=>`<span class="leg"><i style="background:rgb(${n.c[0]},${n.c[1]},${n.c[2]})"></i>${n.name}</span>`).join("")
+      +`<span class="leg" style="color:var(--faint)">鳥の密度＝金額</span>`;
+  }
+
+  function onMove(e){
+    const r=canvas.getBoundingClientRect(); const mx=e.clientX-r.left, my=e.clientY-r.top;
+    let hit=null;
+    for(const n of NODES){ if(mx>=n.x-BW/2-4 && mx<=n.x+BW/2+4 && my>=n.y && my<=n.y+n.h){ hit=n; break; } }
+    hoverNode=hit;
+    if(hit){ tipEl.style.display="block";
+      tipEl.innerHTML=`<b>${hit.name}</b>　${fmt(hit.value)}　(${pct(hit.value)})`;
+      const tr=root.getBoundingClientRect();
+      tipEl.style.left=Math.min(e.clientX-tr.left+14, tr.width-tipEl.offsetWidth-10)+"px";
+      tipEl.style.top=(e.clientY-tr.top+14)+"px";
+    } else tipEl.style.display="none";
+  }
+  canvas.addEventListener("mousemove",onMove);
+  canvas.addEventListener("mouseleave",()=>{hoverNode=null;tipEl.style.display="none";});
+
+  const playBtn=root.querySelector('[data-act="play"]');
+  playBtn.addEventListener("click",()=>{ playing=!playing; playBtn.setAttribute("aria-pressed",String(playing));
+    playBtn.setAttribute("aria-label",playing?"一時停止":"再生"); playBtn.innerHTML=playing?"&#10074;&#10074;":"&#9654;"; });
+  function bindTog(act,fn){ const b=root.querySelector(`[data-act="${act}"]`);
+    b.addEventListener("click",()=>{ const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed",on); fn(on); }); }
+  bindTog("ribbon",on=>showRibbon=on);
+  bindTog("cyber",on=>{ cyber=on; root.classList.toggle("nofx",!on); });
+
+  const modal=root.querySelector('[data-modal]');
+  root.querySelectorAll('[data-act="about"]').forEach(b=>b.addEventListener("click",()=>modal.setAttribute("open","")));
+  root.querySelector('[data-act="close"]').addEventListener("click",()=>modal.removeAttribute("open"));
+  modal.addEventListener("click",e=>{ if(e.target===modal) modal.removeAttribute("open"); });
+
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>running=es[0].isIntersecting,{threshold:0.01}).observe(root);
+  document.addEventListener("visibilitychange",()=>running=!document.hidden);
+  if("ResizeObserver" in window){ let to; new ResizeObserver(()=>{ clearTimeout(to); to=setTimeout(resize,180); }).observe(root); } else addEventListener("resize",resize);
+
+  buildLegend(); resize();
+  if(REDUCE){ playing=false; playBtn.setAttribute("aria-pressed","false"); playBtn.innerHTML="&#9654;"; }
+  requestAnimationFrame(frame);
+
+  /* ── 画像保存／録画（ブラウザ内のみ・送信なし・公知のCanvas/MediaRecorder API） ── */
+  (function(){
+    const ctrl=root.querySelector('.ctrl'); if(!ctrl||!canvas) return;
+    const css=getComputedStyle(root);
+    const accent=(css.getPropertyValue('--accent')||'#f59e0b').trim();
+    const bg=(css.getPropertyValue('--bg')||'#07080c').trim();
+    const NAME='miyazaki_circ';
+    const rows=ctrl.querySelectorAll('.crow'); const bar=rows[rows.length-1]||ctrl;
+    const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');
+      return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());};
+    function dl(blob,ext){const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='krworks_'+NAME+'_'+stamp()+'.'+ext;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);}
+    function savePNG(){
+      const w=canvas.width,h=canvas.height,o=document.createElement('canvas');o.width=w;o.height=h;
+      const g=o.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(canvas,0,0);
+      const dp=Math.min(devicePixelRatio||1,2);
+      g.textAlign='right';g.textBaseline='bottom';
+      g.font='700 '+(15*dp)+'px "Share Tech Mono",monospace';g.fillStyle=accent;g.globalAlpha=.92;
+      g.fillText('KR works',w-13*dp,h-28*dp);
+      g.font='600 '+(12*dp)+'px "Share Tech Mono",monospace';g.fillStyle='rgba(255,255,255,.34)';g.globalAlpha=1;
+      g.fillText('krworks.co.jp',w-13*dp,h-11*dp);
+      o.toBlob(b=>{if(b)dl(b,'png');},'image/png');
+    }
+    let rec=null,chunks=[],recBtn=null,timer=0;
+    const canRec=!!(canvas.captureStream&&window.MediaRecorder&&
+      (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')||MediaRecorder.isTypeSupported('video/webm')));
+    function endRec(){recBtn.textContent='\u25CF \u9332\u753B';recBtn.style.color='';recBtn.style.borderColor='';rec=null;clearTimeout(timer);}
+    function toggleRec(){
+      if(rec){if(rec.state==='recording')rec.stop();return;}
+      const type=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
+      let st;try{st=canvas.captureStream(30);}catch(e){return;}
+      chunks=[];rec=new MediaRecorder(st,{mimeType:type,videoBitsPerSecond:6000000});
+      rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=()=>{if(chunks.length)dl(new Blob(chunks,{type}),'webm');endRec();};
+      rec.start();recBtn.textContent='\u25A0 \u505C\u6B62';recBtn.style.color=accent;recBtn.style.borderColor=accent;
+      timer=setTimeout(()=>{if(rec&&rec.state==='recording')rec.stop();},8000);
+    }
+    const pngBtn=document.createElement('button');pngBtn.className='chip';pngBtn.type='button';
+    pngBtn.textContent='\u753B\u50CF\u4FDD\u5B58';pngBtn.addEventListener('click',savePNG);bar.appendChild(pngBtn);
+    if(canRec){recBtn=document.createElement('button');recBtn.className='chip';recBtn.type='button';
+      recBtn.textContent='\u25CF \u9332\u753B';recBtn.addEventListener('click',toggleRec);bar.appendChild(recBtn);}
+  })();
+})();
+</script>
+</body>
+</html>

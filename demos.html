@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Demo Gallery | KR works LLC</title>
-<meta name="description" content="KR works LLC のデモ一覧。倉庫AGVの安全走行、Transformer内部、市場の murmuration、A*経路計画、ゲーム木探索、群衆避難、NN決定境界、反応拡散。公知アルゴリズムの可視化です。">
+<meta name="description" content="KR works LLC のデモ一覧。倉庫AGVの安全走行、Transformer内部、市場の murmuration、A*経路計画、ゲーム木探索、群衆避難、NN決定境界、反応拡散、宮崎県の地域経済（製造品出荷額・需給循環・域際収支）。公知アルゴリズム・公的統計の可視化です。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=M+PLUS+1:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -88,7 +88,7 @@
   <header class="top">
     <p class="eyebrow">// Demo Gallery</p>
     <h1>デモ一覧</h1>
-    <p>KR works が公開している可視化・シミュレーションのデモです。経路計画、ゲームAI、群衆の流れ、ニューラルネット、スポーツの軌跡、創発する模様——いずれも公知アルゴリズムを、動かして確かめられます。</p>
+    <p>KR works が公開している可視化・シミュレーションのデモです。経路計画、ゲームAI、群衆の流れ、ニューラルネット、スポーツの軌跡、地域経済、創発する模様——いずれも公知アルゴリズムや公的統計を、動かして確かめられます。</p>
   </header>
 
   <div class="grid">
@@ -118,7 +118,7 @@
       <div class="body">
         <div class="cat">Markets · 演出デモ</div>
         <h2>市場の群れ — murmuration</h2>
-        <p>日経225の銘柄をムクドリの群れに見立て、市場の密集・速さ・向き・分裂へ翻訳。あくまで<b style="color:#fbbf24;font-weight:500">演出的写像</b>で、予測でも保存則監査でもありません。</p>
+        <p>日経225の銘柄をムクドリの群れに見立て、市場の密集・速さ・向き・分裂へ翻訳。あくまで<b style="color:#fbbf24;font-weight:500">演出的写像</b>で、予測でも分析でもありません。</p>
         <div class="meta"><span class="tag alt">演出 / 擬似データ</span><span class="go">開く ▶</span></div>
       </div>
     </a>
@@ -223,6 +223,36 @@
       </div>
     </a>
 
+    <a class="demo" href="nobeoka_vs_pref_2d3d.html" style="--accent:#f59e0b;--accentG:rgba(245,158,11,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="mfg"></canvas><div class="ico">出荷額</div></div>
+      <div class="body">
+        <div class="cat">Regional Economy · 2D/3D</div>
+        <h2>宮崎県 製造品出荷額〔2D/3D〕</h2>
+        <p>名目出荷額は外生ショック後も底堅く、集計・価額ベースでは半導体喪失が識別されません。2Dの折れ線と、ライン間を飛行する3D表示を切り替えられます。<b style="color:#fbbf24;font-weight:500">公的統計の実数</b>です。</p>
+        <div class="meta"><span class="tag">実データ</span><span class="tag alt">2D / 3D</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="miyazaki_circ_demo.html" style="--accent:#22d3ee;--accentG:rgba(34,211,238,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="circ"></canvas><div class="ico">循環</div></div>
+      <div class="body">
+        <div class="cat">Regional Economy · 演出デモ</div>
+        <h2>宮崎県の需給循環〔産業連関〕</h2>
+        <p>総供給＝総需要（Y＋M＝C＋I＋X）の循環構造を、鳥の群れの流れで可視化。帯の密度＝金額。動きは<b style="color:#fbbf24;font-weight:500">演出</b>、金額は<b style="color:#fbbf24;font-weight:500">産業連関表の実数</b>です。</p>
+        <div class="meta"><span class="tag alt">演出 / 実数</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="miyazaki_iki_demo.html" style="--accent:#fbbf24;--accentG:rgba(251,191,36,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="iki"></canvas><div class="ico">収支</div></div>
+      <div class="body">
+        <div class="cat">Regional Economy · 演出デモ</div>
+        <h2>宮崎県の域際収支〔部門別〕</h2>
+        <p>移輸出入が生む県際資金フロー。黒字＝純流入は金色、赤字＝純流出はピンク。県全体は−3,901億円の移輸入超過。動きは<b style="color:#fbbf24;font-weight:500">演出</b>、金額は<b style="color:#fbbf24;font-weight:500">実数</b>です。</p>
+        <div class="meta"><span class="tag alt">演出 / 実数</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
     <a class="demo" href="soccer_demo.html" style="--accent:#a3e635;--accentG:rgba(163,230,53,.4)">
       <div class="thumb"><canvas class="dots" data-thumb="soc"></canvas><div class="ico">選手</div></div>
       <div class="body">
@@ -245,7 +275,7 @@
 
   </div>
 
-  <p class="note"><b>「市場の群れ」について：</b>市場の状態を群れの動きへ翻訳した演出であり、株価予測や当社のAI安全性技術（LogicLock）とは無関係です。動作確認用の擬似／記録データで動いています。</p>
+  <p class="note"><b>「市場の群れ」について：</b>市場の状態を群れの動きへ翻訳した演出であり、株価予測や当社の特許関連技術とは無関係です。動作確認用の擬似／記録データで動いています。</p>
 </div>
 
 <a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
@@ -254,8 +284,10 @@
 /* カードの軽量プレビュー：accent色の小さなドット群（静止・低負荷） */
 (() => {
   const accents = { agv:[0,240,255], tf:[129,140,248], mkt:[94,234,212],
-    astar:[56,189,248], gt:[192,132,252], crowd:[251,146,60], nn:[244,114,182], rd:[74,222,128], sby:[232,121,249], dw:[96,165,250], gal:[251,113,133], ff:[250,204,21], ms:[45,212,191], soc:[163,230,53], wc:[167,139,250] };
-  const counts = { mkt:70, tf:54, crowd:84, nn:60, rd:96, gt:52, astar:48, sby:84, dw:74, gal:64, ff:75, ms:96, soc:72, wc:64 };
+    astar:[56,189,248], gt:[192,132,252], crowd:[251,146,60], nn:[244,114,182], rd:[74,222,128], sby:[232,121,249], dw:[96,165,250], gal:[251,113,133], ff:[250,204,21], ms:[45,212,191], soc:[163,230,53], wc:[167,139,250],
+    mfg:[245,158,11], circ:[34,211,238], iki:[251,191,36] };
+  const counts = { mkt:70, tf:54, crowd:84, nn:60, rd:96, gt:52, astar:48, sby:84, dw:74, gal:64, ff:75, ms:96, soc:72, wc:64,
+    mfg:66, circ:72, iki:88 };
   const canvases = [...document.querySelectorAll('canvas[data-thumb]')];
   function paint(c){
     const host = c.parentElement;                 // .thumb（安定したサイズの親から採寸）
@@ -322,6 +354,23 @@
         const bars=8, b=i%bars, h=Math.pow(1-b/bars,1.3);
         x=(0.1+0.8*(b+0.5)/bars)*r.width+(Math.random()-0.5)*6;
         y=r.height*(0.92-Math.random()*h*0.78); al=0.3+0.5*h;
+      } else if(key==='mfg'){                   // 製造品出荷額：3本の上昇ライン
+        const lane=i%3; const seg=(n/3); const t=((i/3)|0)/((seg-1)||1);
+        const base=[0.70,0.56,0.62][lane], slope=[0.24,0.30,0.12][lane];
+        x=(0.12+0.76*t)*r.width;
+        y=(base - slope*t + 0.03*Math.sin(t*7+lane*2))*r.height;
+        al=0.4+0.45*t;
+      } else if(key==='circ'){                  // 需給循環：左→右の流れストリーム
+        const lane=i%3, t=Math.random();
+        const amp=[0.20,0.0,-0.20][lane];
+        x=(0.12+0.76*t)*r.width;
+        y=(0.5+amp*Math.sin(t*3.14159))*r.height+(Math.random()-0.5)*6;
+        al=0.3+0.5*t;
+      } else if(key==='iki'){                   // 域際収支：旋回→2クラスタへ集約
+        if(i<n*0.5){ const a=Math.random()*6.28, rad=Math.random()*0.34*r.width;
+          x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7; al=0.22+Math.random()*0.38; }
+        else { const cl=[[0.33,0.40],[0.66,0.60]][i%2]; const a=Math.random()*6.28, rad=Math.random()*0.13*r.width;
+          x=cl[0]*r.width+Math.cos(a)*rad; y=cl[1]*r.height+Math.sin(a)*rad*0.8; al=0.4+Math.random()*0.45; }
       } else {                                 // 群れ（mkt）
         const a=Math.random()*6.28, rad=Math.random()*r.width*0.28;
         x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7;
