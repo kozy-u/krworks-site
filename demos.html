@@ -267,6 +267,36 @@
       </div>
     </a>
 
+    <a class="demo" href="miyazaki_mortality_2d3d.html" style="--accent:#f87171;--accentG:rgba(248,113,113,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="mzmort"></canvas><div class="ico">死亡率</div></div>
+      <div class="body">
+        <div class="cat">Public Health · 2D/3D</div>
+        <h2>宮崎9圏域 死亡分析〔2D/3D〕</h2>
+        <p>9つの二次医療圏の死亡格差を年齢構造から分解。粗死亡率は高齢化率でほぼ説明され（r=0.983）、年齢を揃えると順位が変わります。「3D」で県地図上に立体表示・低空フライトも。<b style="color:#fbbf24;font-weight:500">公的統計の実数</b>です。</p>
+        <div class="meta"><span class="tag">実データ</span><span class="tag alt">2D / 3D</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="miyazaki_anime_demo.html" style="--accent:#34d399;--accentG:rgba(52,211,153,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="mzanim"></canvas><div class="ico">推移</div></div>
+      <div class="body">
+        <div class="cat">Public Health · アニメ</div>
+        <h2>宮崎9圏域 死亡分析 アニメ集</h2>
+        <p>散布のレーダー走査、粗→年齢調整の順位逆転モーフ、信頼区間のソナー展開、自然減の波及、脳卒中病型の掃引。スクロールで各グラフが起動します。<b style="color:#fbbf24;font-weight:500">公的統計の実数</b>です。</p>
+        <div class="meta"><span class="tag">実データ</span><span class="tag alt">アニメ</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
+    <a class="demo" href="miyazaki_vital_demo.html" style="--accent:#fde047;--accentG:rgba(253,224,71,.4)">
+      <div class="thumb"><canvas class="dots" data-thumb="mzvital"></canvas><div class="ico">動態</div></div>
+      <div class="body">
+        <div class="cat">Public Health · 単一出典</div>
+        <h2>宮崎9圏域 人口動態〔単一出典〕</h2>
+        <p>『保健所業務概要 令和7年度版』だけを出典に、出生・死亡・自然増減・医師数を可視化。9圏域すべてが人口自然減で、高齢化が深いほど減少も深いことが分かります。<b style="color:#fbbf24;font-weight:500">公的統計の実数</b>です。</p>
+        <div class="meta"><span class="tag">実データ</span><span class="tag alt">単一出典</span><span class="go">開く ▶</span></div>
+      </div>
+    </a>
+
     <a class="demo" href="soccer_demo.html" style="--accent:#a3e635;--accentG:rgba(163,230,53,.4)">
       <div class="thumb"><canvas class="dots" data-thumb="soc"></canvas><div class="ico">選手</div></div>
       <div class="body">
@@ -299,9 +329,10 @@
 (() => {
   const accents = { agv:[0,240,255], tf:[129,140,248], mkt:[94,234,212],
     astar:[56,189,248], gt:[192,132,252], crowd:[251,146,60], nn:[244,114,182], rd:[74,222,128], sby:[232,121,249], dw:[96,165,250], gal:[251,113,133], ff:[250,204,21], ms:[45,212,191], soc:[163,230,53], wc:[167,139,250],
-    mfg:[245,158,11], circ:[34,211,238], iki:[251,191,36], iip:[244,114,182] };
+    mfg:[245,158,11], circ:[34,211,238], iki:[251,191,36], iip:[244,114,182],
+    mzmort:[248,113,113], mzanim:[52,211,153], mzvital:[253,224,71] };
   const counts = { mkt:70, tf:54, crowd:84, nn:60, rd:96, gt:52, astar:48, sby:84, dw:74, gal:64, ff:75, ms:96, soc:72, wc:64,
-    mfg:66, circ:72, iki:88, iip:66 };
+    mfg:66, circ:72, iki:88, iip:66, mzmort:72, mzanim:60, mzvital:64 };
   const canvases = [...document.querySelectorAll('canvas[data-thumb]')];
   function paint(c){
     const host = c.parentElement;                 // .thumb（安定したサイズの親から採寸）
@@ -394,6 +425,18 @@
           x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7; al=0.22+Math.random()*0.38; }
         else { const cl=[[0.33,0.40],[0.66,0.60]][i%2]; const a=Math.random()*6.28, rad=Math.random()*0.13*r.width;
           x=cl[0]*r.width+Math.cos(a)*rad; y=cl[1]*r.height+Math.sin(a)*rad*0.8; al=0.4+Math.random()*0.45; }
+      } else if(key==='mzmort'){               // 死亡：圏域の棒（高さばらつき）
+        const bars=8,b=i%bars,hts=[0.30,0.66,0.60,0.62,0.74,0.68,0.62,0.42],h=hts[b];
+        x=(0.1+0.8*(b+0.5)/bars)*r.width+(Math.random()-0.5)*5;
+        y=r.height*(0.90-Math.random()*h*0.78); al=0.4+0.45*h;
+      } else if(key==='mzanim'){               // 順位逆転：交差するライン束
+        const lines=6,ln=i%lines,t=Math.random();
+        const y0=0.14+ln/lines*0.72, y1=0.14+((lines-1-ln)/lines)*0.72;
+        x=(0.16+0.68*t)*r.width; y=(y0+(y1-y0)*t)*r.height+(Math.random()-0.5)*4; al=0.32+0.4*t;
+      } else if(key==='mzvital'){              // 人口自然減：上から下がる棒
+        const bars=8,b=i%bars,d=[0.16,0.55,0.42,0.51,0.68,0.58,0.54,0.10][b];
+        x=(0.1+0.8*(b+0.5)/bars)*r.width+(Math.random()-0.5)*5;
+        y=(0.16+Math.random()*d*0.72)*r.height; al=0.38+0.45*d;
       } else {                                 // 群れ（mkt）
         const a=Math.random()*6.28, rad=Math.random()*r.width*0.28;
         x=r.width*0.5+Math.cos(a)*rad; y=r.height*0.5+Math.sin(a)*rad*0.7;

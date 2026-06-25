@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宮崎9圏域 死亡分析 // 公開可能版</title>
+<style>
+:root{
+  --void:#05070f; --panel:rgba(13,19,38,.72); --panel-solid:#0a1024;
+  --grid:#13203f; --grid-soft:#0e1730; --line:#1b2a4f;
+  --cy:#2ff5e0; --cy-deep:#0b6f67; --mag:#ff2e88; --mag-deep:#7a1240;
+  --amb:#ffb12e; --vio:#8b7bff; --dim:#6d7ca2; --txt:#bfcae6; --bright:#eef4ff;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,'Courier New',monospace;
+  --font-sans:system-ui,-apple-system,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic',Meiryo,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--txt);font-family:var(--font-sans);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(1200px 700px at 78% -8%, rgba(47,245,224,.06), transparent 60%),
+    radial-gradient(900px 600px at 6% 12%, rgba(255,46,136,.05), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(20,33,66,.28) 38px 39px),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(20,33,66,.28) 38px 39px);}
+body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px);opacity:.5}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 22px}
+
+.statusbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:10px 22px;
+  background:linear-gradient(180deg, rgba(5,7,15,.96), rgba(5,7,15,.78));border-bottom:1px solid var(--line);
+  backdrop-filter:blur(6px);font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.statusbar .led{width:7px;height:7px;border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy);animation:pulse 2.4s infinite}
+.statusbar .sep{color:#2b3a5e}
+.statusbar .priv{color:var(--cy);border:1px solid rgba(47,245,224,.4);padding:2px 8px;border-radius:2px}
+.statusbar .right{margin-left:auto;display:flex;gap:16px;align-items:center}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+.hero{position:relative;padding:74px 0 40px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.42em;color:var(--cy);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.eyebrow::before{content:"";width:46px;height:1px;background:linear-gradient(90deg,var(--cy),transparent)}
+h1{font-family:var(--font-mono);font-weight:700;font-size:clamp(30px,6vw,62px);line-height:1.04;letter-spacing:-.01em;color:var(--bright);margin-bottom:8px}
+h1 .frag{color:var(--cy);text-shadow:0 0 24px rgba(47,245,224,.35)}
+.subline{max-width:700px;color:var(--dim);font-size:15px;margin-top:18px}
+.thesis{margin-top:40px;display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center;
+  border:1px solid var(--line);border-left:3px solid var(--cy);
+  background:linear-gradient(135deg, rgba(47,245,224,.05), transparent 70%);padding:26px 30px;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%)}
+.thesis .big{font-family:var(--font-mono);font-size:clamp(54px,10vw,92px);font-weight:700;color:var(--bright);line-height:.9;text-shadow:0 0 34px rgba(47,245,224,.3)}
+.thesis .big small{font-size:.32em;color:var(--cy);vertical-align:super;letter-spacing:.05em}
+.thesis .body .lead{color:var(--bright);font-size:16px;font-weight:600;margin-bottom:6px}
+.thesis .body .det{font-size:13.5px;color:var(--dim)}
+.thesis .body .det b{color:var(--cy);font-family:var(--font-mono)}
+
+section{padding:46px 0;border-top:1px solid var(--grid-soft)}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:8px;flex-wrap:wrap}
+.sec-no{font-family:var(--font-mono);font-size:12px;color:var(--mag);letter-spacing:.2em}
+.sec-title{font-family:var(--font-mono);font-size:clamp(19px,3vw,26px);color:var(--bright);font-weight:600;letter-spacing:.01em}
+.sec-tag{margin-left:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:3px 10px;border-radius:2px;color:var(--cy);border:1px solid rgba(47,245,224,.4);background:rgba(47,245,224,.06)}
+.sec-desc{color:var(--dim);font-size:14px;max-width:780px;margin:6px 0 26px}
+.sec-desc b{color:var(--txt)}
+.panel{background:var(--panel);border:1px solid var(--line);position:relative;backdrop-filter:blur(3px)}
+.panel::before,.panel::after{content:"";position:absolute;width:12px;height:12px;border:1px solid var(--cy);opacity:.5}
+.panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+/* scatter */
+.scatter-wrap{display:grid;grid-template-columns:1fr 280px;gap:0}
+@media(max-width:820px){.scatter-wrap{grid-template-columns:1fr}}
+#scatter{width:100%;display:block;height:auto}
+.scatter-side{border-left:1px solid var(--line);padding:22px;display:flex;flex-direction:column;gap:18px;font-family:var(--font-mono)}
+@media(max-width:820px){.scatter-side{border-left:0;border-top:1px solid var(--line)}}
+.stat-block .k{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.stat-block .v{font-size:30px;color:var(--bright);line-height:1.1;margin-top:2px}
+.stat-block .v span{color:var(--cy)}
+.stat-block .note{font-size:11px;color:var(--dim);margin-top:3px;font-family:var(--font-sans)}
+.divider{height:1px;background:var(--line)}
+.tip{position:fixed;z-index:60;pointer-events:none;background:var(--panel-solid);border:1px solid var(--cy);
+  font-family:var(--font-mono);font-size:12px;padding:8px 11px;color:var(--txt);opacity:0;transition:opacity .12s;box-shadow:0 0 20px rgba(0,0,0,.6)}
+.tip b{color:var(--bright)} .tip .r1{color:var(--cy)}
+
+/* bump */
+#bump{width:100%;display:block;height:auto}
+.bump-legend{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12px;color:var(--dim);padding:16px 24px;border-top:1px solid var(--line)}
+.bump-legend .it{display:flex;align-items:center;gap:8px}
+.bump-legend .ln{width:22px;height:2px}
+
+/* forest */
+#forest{width:100%;display:block;height:auto}
+
+/* medical bars */
+.med{padding:26px 28px}
+.med-row{display:grid;grid-template-columns:84px 1fr 96px;align-items:center;gap:14px;margin:13px 0;font-family:var(--font-mono);font-size:13px}
+.med-row .nm{color:var(--txt)}
+.med-track{height:20px;background:var(--grid-soft);position:relative;border:1px solid var(--grid)}
+.med-track .bar{position:absolute;top:0;bottom:0;left:0;width:0;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.med-track .ref{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--amb);box-shadow:0 0 8px var(--amb)}
+.med-row .val{color:var(--cy);text-align:right}
+.med-foot{font-family:var(--font-mono);font-size:11px;color:#4a5a7e;padding:0 28px 22px}
+
+/* stroke */
+.stroke-grid{display:grid;grid-template-columns:280px 1fr;gap:0;align-items:center}
+@media(max-width:760px){.stroke-grid{grid-template-columns:1fr}}
+.donut-box{padding:24px;display:grid;place-items:center}
+.donut-legend{padding:24px 26px;border-left:1px solid var(--line)}
+@media(max-width:760px){.donut-legend{border-left:0;border-top:1px solid var(--line)}}
+.lg-row{display:flex;align-items:center;gap:12px;margin:10px 0;font-family:var(--font-mono);font-size:13px}
+.lg-row .sw{width:12px;height:12px;flex:0 0 auto}
+.lg-row .nm{color:var(--txt);flex:1}
+.lg-row .pc{color:var(--bright);font-size:16px}
+.dismiss{margin-top:26px;border:1px solid rgba(47,245,224,.3);background:rgba(47,245,224,.04);padding:18px 20px}
+.dismiss .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--cy);margin-bottom:8px}
+.dismiss p{font-size:13px;color:var(--dim)} .dismiss b{color:var(--txt);font-family:var(--font-mono)}
+
+footer{border-top:1px solid var(--line);padding:42px 0 70px;margin-top:30px}
+.frame{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:30px}
+@media(max-width:680px){.frame{grid-template-columns:1fr}}
+.fr{border:1px solid var(--line);border-left:3px solid var(--dim);padding:16px 20px;background:rgba(109,124,162,.04)}
+.fr.ok{border-left-color:var(--cy);background:rgba(47,245,224,.03)}
+.fr .h{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.fr.ok .h{color:var(--cy)}
+.fr p{font-size:13px;color:var(--dim)} .fr p b{color:var(--txt)}
+.meta{font-family:var(--font-mono);font-size:11px;color:#3f4d70;letter-spacing:.1em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid var(--grid-soft);padding-top:18px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+
+/* ===== 3D toggle button ===== */
+.btn3d{position:fixed;bottom:20px;right:20px;z-index:120;font-family:var(--font-mono);font-size:14px;letter-spacing:.12em;font-weight:700;
+ color:#05070f;background:linear-gradient(135deg,var(--cy),#13a99c);border:1px solid var(--cy);padding:13px 22px;border-radius:4px;cursor:pointer;
+ box-shadow:0 0 18px rgba(47,245,224,.35);display:flex;align-items:center;gap:9px;transition:.15s}
+.btn3d:hover{box-shadow:0 0 30px rgba(47,245,224,.6);transform:translateY(-1px)}
+.btn3d .dot{width:7px;height:7px;border-radius:50%;background:#05070f}
+#geoOverlay{position:fixed;inset:0;z-index:300;background:#05070f;display:none}
+#geoOverlay.show{display:block}
+#geo3d{position:absolute;inset:0;overflow:hidden}
+#geo3d .gclose{margin-left:12px;font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;color:var(--cy);
+ background:rgba(47,245,224,.07);border:1px solid rgba(47,245,224,.45);padding:7px 14px;border-radius:3px;cursor:pointer}
+#geo3d .gclose:hover{background:rgba(47,245,224,.16)}
+#geo3d{--mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;--sans:system-ui,'Hiragino Sans','Noto Sans JP',sans-serif}
+/* ===== scoped 3D scene styles ===== */
+#geo3d{--cy:#2ff5e0;--mag:#ff2e88;--amb:#ffb12e;--dim:#6d7ca2;--txt:#bfcae6;--bright:#eef4ff;
+ --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;--sans:system-ui,'Hiragino Sans','Noto Sans JP',sans-serif;}
+#geo3d *{box-sizing:border-box;margin:0;padding:0}
+#geo3d, #geo3d{height:100%}
+#geo3d{background:#05070f;color:var(--txt);font-family:var(--sans);overflow:hidden}
+#geo3d #app{position:fixed;inset:0}
+#geo3d canvas{display:block}
+#geo3d .scan{position:fixed;inset:0;z-index:30;pointer-events:none;mix-blend-mode:overlay;
+ background:repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 3px);opacity:.5}
+#geo3d .hud{position:fixed;z-index:20;font-family:var(--mono)}
+#geo3d .topbar{top:0;left:0;right:0;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 18px;
+ background:linear-gradient(180deg,rgba(5,7,15,.92),rgba(5,7,15,.4));border-bottom:1px solid #1b2a4f;
+ font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+#geo3d .topbar .led{width:7px;height:7px;border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy);animation:pulse 2.4s infinite}
+#geo3d .topbar .t{color:var(--bright);letter-spacing:.05em;text-transform:none;font-size:13px}
+#geo3d .topbar .sep{color:#2b3a5e}
+#geo3d .topbar .priv{margin-left:auto;color:var(--cy);border:1px solid rgba(47,245,224,.4);padding:2px 8px;border-radius:2px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+#geo3d .legend{top:62px;left:18px;width:210px;background:rgba(8,12,24,.7);border:1px solid #1b2a4f;backdrop-filter:blur(5px);padding:14px 15px}
+#geo3d .legend h3{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;font-weight:500}
+#geo3d .legend .grad{height:10px;border-radius:2px;background:linear-gradient(90deg,#2ff5e0,#8b7bff,#ff2e88);margin:6px 0 3px}
+#geo3d .legend .gl{display:flex;justify-content:space-between;font-size:10px;color:var(--dim)}
+#geo3d .legend .row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--txt);margin-top:9px}
+#geo3d .legend .row b{color:var(--cy)}
+#geo3d .panel{bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+ background:rgba(8,12,24,.72);border:1px solid #1b2a4f;backdrop-filter:blur(6px);padding:10px 14px;max-width:94vw}
+#geo3d .seg{display:flex;border:1px solid #1b2a4f;border-radius:3px;overflow:hidden}
+#geo3d .seg button{font-family:var(--mono);font-size:12px;color:var(--dim);background:transparent;border:0;padding:8px 14px;cursor:pointer;transition:.15s}
+#geo3d .seg button.on{color:#05070f;background:var(--cy);font-weight:700}
+#geo3d .seg button:hover:not(.on){color:var(--cy)}
+#geo3d .sel{font-family:var(--mono);font-size:12px;color:var(--txt);background:rgba(47,245,224,.05);border:1px solid #1b2a4f;border-radius:3px;padding:8px 10px;cursor:pointer}
+#geo3d .sel:focus{outline:1px solid var(--cy)}
+#geo3d .btn{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--cy);background:rgba(47,245,224,.07);
+ border:1px solid rgba(47,245,224,.45);padding:9px 16px;border-radius:3px;cursor:pointer;transition:.15s}
+#geo3d .btn:hover{background:rgba(47,245,224,.16);box-shadow:0 0 12px rgba(47,245,224,.25)}
+#geo3d .btn.fly.active{color:#05070f;background:var(--mag);border-color:var(--mag);box-shadow:0 0 16px rgba(255,46,136,.4)}
+#geo3d .flighthud{top:62px;right:18px;width:188px;background:rgba(8,12,24,.7);border:1px solid rgba(255,46,136,.4);backdrop-filter:blur(5px);padding:13px 15px;display:none}
+#geo3d .flighthud.show{display:block}
+#geo3d .flighthud .k{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+#geo3d .flighthud .v{font-size:22px;color:var(--mag);font-family:var(--mono);line-height:1.1;margin-bottom:8px}
+#geo3d .flighthud .loc{font-size:13px;color:var(--bright);font-family:var(--sans);margin-top:4px}
+#geo3d .hint{bottom:74px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:#4a5a7e;text-align:center;width:90vw}
+#geo3d .err{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;
+ font-family:var(--mono);color:var(--amb);font-size:14px;line-height:1.8}
+#geo3d .err.show{display:flex}
+#geo3d .credit{position:fixed;bottom:4px;right:10px;z-index:20;font-family:var(--mono);font-size:9.5px;color:#34425f;letter-spacing:.05em}
+</style>
+</head>
+<body>
+
+<div class="statusbar">
+  <span class="led"></span>
+  <span>KRWORKS / 地域死亡分析</span>
+  <span class="sep">//</span>
+  <span>宮崎9圏域</span>
+  <span class="sep">//</span>
+  <span>衛生統計年報 R4–R6</span>
+  <span class="priv">公開可能版</span>
+  <span class="right"><span>標準的公衆衛生分析</span></span>
+</div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">Regional Mortality Analysis &nbsp;//&nbsp; Miyazaki 9 Districts</div>
+    <h1>宮崎9圏域 <span class="frag">死亡分析</span></h1>
+    <p class="subline">令和4–6年 宮崎県衛生統計年報と健康づくり推進センター公式SMRを素材に、二次医療圏ごとの死亡格差を年齢構造・年齢調整死亡率・医療資源の観点から分解した地域分析。</p>
+    <div class="thesis">
+      <div class="big">97<small>%</small></div>
+      <div class="body">
+        <div class="lead">圏域間の死亡格差は、ほぼ高齢化で説明される。</div>
+        <div class="det">粗死亡率 vs 高齢化率 — 人口加重相関 <b>r=0.983</b> / <b>R²=0.967</b>。<br>ただし年齢を揃えてもなお残る差（残差）があり、延岡が最高・宮崎市が最低。</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 01 SCATTER -->
+  <section id="s1">
+    <div class="sec-head"><span class="sec-no">01</span><span class="sec-title">高齢化率 → 粗死亡率</span><span class="sec-tag">CORRELATION CONFIRMED</span></div>
+    <p class="sec-desc">8圏域（都城は死亡データ欠で除外）の散布と単回帰。点にカーソルで圏域の素性が出る。<b>延岡</b>は粗死亡率18.45‰でトレンド線上にほぼ乗る。</p>
+    <div class="panel">
+      <div class="scatter-wrap">
+        <svg id="scatter" viewBox="0 0 640 460" preserveAspectRatio="xMidYMid meet" aria-label="高齢化率と粗死亡率の散布図"></svg>
+        <div class="scatter-side">
+          <div class="stat-block"><div class="k">単純回帰 (8圏域)</div><div class="v"><span id="r8">r=—</span></div><div class="note">R²=<span id="r8sq">—</span> ／ on-chartは非加重の再計算値</div></div>
+          <div class="divider"></div>
+          <div class="stat-block"><div class="k">本セッション確定値</div><div class="v"><span>r=0.983</span></div><div class="note">R²=0.967（人口加重）＝ヘッドライン97%の根拠</div></div>
+          <div class="divider"></div>
+          <div class="stat-block"><div class="k">傾き</div><div class="v" id="slope">—</div><div class="note">高齢化率+1ptあたりの粗死亡率上昇(‰)</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 BUMP (signature) -->
+  <section id="s2">
+    <div class="sec-head"><span class="sec-no">02</span><span class="sec-title">年齢を揃えると地図が変わる</span><span class="sec-tag">RANK INVERSION</span></div>
+    <p class="sec-desc">左＝粗死亡率の順位（1位＝最も高い）。右＝年齢調整死亡率（直接法・平成27モデル人口）の順位。<b>高千穂</b>は粗で最悪でも、年齢を揃えると最良級へ大きく下降——高さはほぼ全部が高齢構造。逆に<b>延岡</b>は調整後に最上位へ上昇＝年齢で説明できない残差。</p>
+    <div class="panel">
+      <svg id="bump" viewBox="0 0 640 420" preserveAspectRatio="xMidYMid meet" aria-label="粗死亡率と年齢調整死亡率の順位変化"></svg>
+      <div class="bump-legend">
+        <span class="it"><span class="ln" style="background:var(--cy)"></span>年齢調整で改善（順位低下）</span>
+        <span class="it"><span class="ln" style="background:var(--mag)"></span>年齢調整で悪化（順位上昇）＝残差</span>
+        <span class="it" style="color:#4a5a7e">小林は年齢別死亡数欠で直接法算出不可・除外</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 FOREST (ASMR + CI) -->
+  <section id="s3">
+    <div class="sec-head"><span class="sec-no">03</span><span class="sec-title">年齢調整死亡率と95%信頼区間</span><span class="sec-tag">AGE-STANDARDIZED</span></div>
+    <p class="sec-desc">直接法ASMR（平成27年モデル人口・10万対）。区間が重ならなければ統計的に差あり。<b>延岡（最高）と宮崎市（最低）はCI非重複</b>＝年齢を除いてなお差が残る。県基準SMR（全国=100）でも延岡120.4・宮崎市97.8。</p>
+    <div class="panel">
+      <svg id="forest" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid meet" aria-label="年齢調整死亡率の信頼区間プロット"></svg>
+    </div>
+  </section>
+
+  <!-- 04 MEDICAL RESOURCES -->
+  <section id="s4">
+    <div class="sec-head"><span class="sec-no">04</span><span class="sec-title">医療資源の偏在 — 医師密度</span><span class="sec-tag">MALDISTRIBUTION</span></div>
+    <p class="sec-desc">人口10万対 医療施設従事医師数。県平均は<b>282.2</b>（橙線）。宮崎市が突出（県内医師の約52%が集中）し、中央・高鍋・高千穂は県平均の半分前後。なお医師密度と死亡率の間に強い関係は見られない（死亡は年齢主導）。</p>
+    <div class="panel">
+      <div class="med" id="medBars"></div>
+      <div class="med-foot">※宮崎市はOCR抽出（免許保持者ベースの可能性）で定義差に注意。橙線＝県平均282.2／10万。都城は死亡データ欠で死亡分析からは除外。</div>
+    </div>
+  </section>
+
+  <!-- 05 STROKE -->
+  <section id="s5">
+    <div class="sec-head"><span class="sec-no">05</span><span class="sec-title">脳卒中病型 と 延岡の検証</span><span class="sec-tag">FALSE ALARM DISMISSED</span></div>
+    <p class="sec-desc">脳卒中病型（3年451件）の構成は県・全国とほぼ同一。延岡の「脳卒中超過」は率比検定で過大評価を否定された。</p>
+    <div class="panel stroke-grid">
+      <div class="donut-box"><svg id="donut" viewBox="0 0 200 200" width="200" height="200" aria-label="脳卒中病型構成"></svg></div>
+      <div class="donut-legend">
+        <div class="lg-row"><span class="sw" style="background:var(--cy)"></span><span class="nm">脳梗塞</span><span class="pc">57.9%</span></div>
+        <div class="lg-row"><span class="sw" style="background:var(--vio)"></span><span class="nm">脳内出血</span><span class="pc">28.2%</span></div>
+        <div class="lg-row"><span class="sw" style="background:var(--mag)"></span><span class="nm">くも膜下出血</span><span class="pc">10.2%</span></div>
+        <div class="lg-row"><span class="sw" style="background:#33425f"></span><span class="nm">その他・不明</span><span class="pc">3.7%</span></div>
+        <div class="dismiss">
+          <div class="h">// 延岡 脳卒中超過 — 棄却</div>
+          <p>延岡 男40–64 脳卒中 vs 県：率比 <b>1.28</b> [95%CI 0.82–1.91] ＝<b style="color:var(--cy)">有意でない</b>。脳卒中は県レベル現象で、延岡は標準的な一部。延岡の年齢調整死亡率は最高だが、その超過を脳卒中という特定病型で説明する仮説は支持されない。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="frame">
+      <div class="fr ok"><div class="h">公開可能版</div><p>本ファイルは<b>標準的な公衆衛生・地域分析のみ</b>で構成。当社が出願準備中の独自技術は<b>一切掲載していない</b>。</p></div>
+      <div class="fr"><div class="h">データ出典（6系統）</div><p>
+        ① 圏域別の人口動態（出生・死亡）・医師数 → 8県保健所＋宮崎市保健所『<b>保健所業務概要 令和7年度版</b>』。<br>
+        ② 人口・高齢化率 → 宮崎県推計人口（R6.10.1）／宮崎市は国勢調査R2。<br>
+        ③ 年齢調整の基準 → 厚労省 令和5年人口動態統計（確定数）・総務省人口推計／平成27年モデル人口。<br>
+        ④ 脳卒中病型・年齢構造（§05）→ <b>宮崎県衛生統計年報 第75–77号</b>／全国は令和4年人口動態統計。<br>
+        ⑤ 死因別SMR → 宮崎県健康づくり推進センター。<br>
+        ⑥ 高千穂の率 → 県公表の正誤表に基づく補正値。
+      </p></div>
+      <div class="fr"><div class="h">方法</div><p>直接法（平成27年モデル人口・10歳階級）／間接法SMR（全国・県=100）／単回帰。延岡・宮崎市のCI非重複は有意差を示す。<br>§01–04の局所データは①保健所業務概要が主、§05のみ④衛生統計年報由来。</p></div>
+      <div class="fr"><div class="h">留保</div><p>都城・小林は年齢別死亡数欠で直接法算出不可。宮崎市医師数はOCR抽出で定義差の可能性。死亡はR4/R5混在・人口はR6.10.1現住。</p></div>
+    </div>
+    <div class="meta">
+      <span>合同会社KRWORKS / 宮崎9圏域 死亡分析</span>
+      <span>SINGLE-FILE / NO EXTERNAL CALL / 2026-06-25</span>
+    </div>
+  </footer>
+
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+/* ===== DATA (標準的な公衆衛生データのみ) ===== */
+const REGIONS = [
+  {nm:'宮崎市', age:28.3, cdr:12.09, md:374.7, pop:401339, asmr:995.8,  ci:[967.3,1024.3]},
+  {nm:'延岡',   age:36.1, cdr:18.45, md:227.7, pop:111543, asmr:1184.9, ci:[1131.8,1238.1]},
+  {nm:'日向',   age:36.5, cdr:17.13, md:182.5, pop:81092,  asmr:1104.8, ci:[1044.5,1165.0]},
+  {nm:'高鍋',   age:37.2, cdr:17.95, md:162.4, pop:91149,  asmr:1144.1, ci:[1086.5,1201.7]},
+  {nm:'日南',   age:42.2, cdr:21.22, md:277.7, pop:62307,  asmr:1135.7, ci:[1069.7,1201.7]},
+  {nm:'小林',   age:41.6, cdr:20.07, md:198.3, pop:65062,  asmr:null,   ci:null},
+  {nm:'中央',   age:39.5, cdr:18.39, md:132.5, pop:24149,  asmr:1120.2, ci:[1012.0,1228.3]},
+  {nm:'高千穂', age:46.8, cdr:22.57, md:160.4, pop:16838,  asmr:1053.3, ci:[939.4,1167.2]},
+];
+const NS='http://www.w3.org/2000/svg';
+const mk=(p,t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;p.appendChild(e);return e;};
+
+/* ===== regression ===== */
+function linreg(xs,ys){const n=xs.length,mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;let sxy=0,sxx=0,syy=0;
+  for(let i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)**2;syy+=(ys[i]-my)**2;}
+  return {slope:sxy/sxx,inter:my-(sxy/sxx)*mx,r:sxy/Math.sqrt(sxx*syy)};}
+const reg=linreg(REGIONS.map(d=>d.age),REGIONS.map(d=>d.cdr));
+document.getElementById('r8').textContent='r='+reg.r.toFixed(3);
+document.getElementById('r8sq').textContent=(reg.r*reg.r).toFixed(3);
+document.getElementById('slope').textContent='+'+reg.slope.toFixed(3)+'‰';
+
+/* ===== SCATTER ===== */
+(function(){
+  const svg=document.getElementById('scatter'),W=640,H=460,m={l:62,r:24,t:24,b:54};
+  const xmin=26,xmax=49,ymin=10,ymax=24;
+  const px=v=>m.l+(v-xmin)/(xmax-xmin)*(W-m.l-m.r), py=v=>H-m.b-(v-ymin)/(ymax-ymin)*(H-m.t-m.b);
+  for(let gx=28;gx<=48;gx+=4){mk(svg,'line',{x1:px(gx),y1:m.t,x2:px(gx),y2:H-m.b,stroke:'#13203f','stroke-width':1});
+    mk(svg,'text',{x:px(gx),y:H-m.b+22,fill:'#6d7ca2','font-size':11,'text-anchor':'middle','font-family':'monospace'},gx+'%');}
+  for(let gy=12;gy<=24;gy+=4){mk(svg,'line',{x1:m.l,y1:py(gy),x2:W-m.r,y2:py(gy),stroke:'#13203f','stroke-width':1});
+    mk(svg,'text',{x:m.l-10,y:py(gy)+4,fill:'#6d7ca2','font-size':11,'text-anchor':'end','font-family':'monospace'},gy);}
+  mk(svg,'text',{x:(m.l+W-m.r)/2,y:H-14,fill:'#bfcae6','font-size':12,'text-anchor':'middle','font-family':'monospace','letter-spacing':'.1em'},'高齢化率 (%)');
+  mk(svg,'text',{x:18,y:(m.t+H-m.b)/2,fill:'#bfcae6','font-size':12,'text-anchor':'middle','font-family':'monospace','letter-spacing':'.1em',transform:`rotate(-90 18 ${(m.t+H-m.b)/2})`},'粗死亡率 (‰)');
+  const x1=xmin+1,x2=xmax-1;
+  mk(svg,'line',{x1:px(x1),y1:py(reg.slope*x1+reg.inter),x2:px(x2),y2:py(reg.slope*x2+reg.inter),stroke:'#ffb12e','stroke-width':1.6,'stroke-dasharray':'7 5',opacity:.85});
+  mk(svg,'text',{x:px(x2)-4,y:py(reg.slope*x2+reg.inter)-10,fill:'#ffb12e','font-size':11,'text-anchor':'end','font-family':'monospace'},'回帰トラジェクトリ');
+  const tip=document.getElementById('tip');
+  REGIONS.forEach(d=>{
+    const cx=px(d.age),cy=py(d.cdr),isN=d.nm==='延岡',col=isN?'#ff2e88':'#2ff5e0';
+    mk(svg,'circle',{cx,cy,r:14,fill:col,opacity:.10});
+    const c=mk(svg,'circle',{cx,cy,r:6,fill:'#05070f',stroke:col,'stroke-width':2,style:'cursor:pointer;filter:drop-shadow(0 0 6px '+col+')'});
+    mk(svg,'text',{x:cx,y:cy-16,fill:isN?'#ff2e88':'#bfcae6','font-size':11,'text-anchor':'middle','font-family':'monospace'},d.nm);
+    c.addEventListener('mousemove',e=>{tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';
+      tip.innerHTML=`<b>${d.nm}</b><br>高齢化率 ${d.age}%<br>粗死亡率 <span class="r1">${d.cdr}‰</span><br>医師密度 ${d.md}/10万<br>人口 ${d.pop.toLocaleString()}`;});
+    c.addEventListener('mouseleave',()=>tip.style.opacity=0);
+  });
+})();
+
+/* ===== BUMP (rank inversion crude → ASMR) ===== */
+(function(){
+  const svg=document.getElementById('bump'),W=640,H=420,m={t:46,b:40,l:120,r:120};
+  const have=REGIONS.filter(d=>d.asmr!=null);
+  const rk=(arr,key)=>{const s=[...arr].sort((a,b)=>b[key]-a[key]);const map={};s.forEach((d,i)=>map[d.nm]=i+1);return map;};
+  const rC=rk(have,'cdr'),rA=rk(have,'asmr'),n=have.length;
+  const yL=r=>m.t+(r-1)/(n-1)*(H-m.t-m.b), xL=m.l, xR=W-m.r;
+  mk(svg,'text',{x:xL,y:26,fill:'#bfcae6','font-size':13,'text-anchor':'middle','font-family':'monospace','letter-spacing':'.08em'},'粗死亡率 順位');
+  mk(svg,'text',{x:xR,y:26,fill:'#bfcae6','font-size':13,'text-anchor':'middle','font-family':'monospace','letter-spacing':'.08em'},'年齢調整死亡率 順位');
+  // rank guides
+  for(let r=1;r<=n;r++){mk(svg,'line',{x1:xL,y1:yL(r),x2:xR,y2:yL(r),stroke:'#0e1730','stroke-width':1});}
+  have.forEach(d=>{
+    const y1=yL(rC[d.nm]),y2=yL(rA[d.nm]);
+    const improved=rA[d.nm]>rC[d.nm]; // larger rank number = lower mortality = improved
+    const col=improved?'#2ff5e0':(rA[d.nm]<rC[d.nm]?'#ff2e88':'#6d7ca2');
+    const cx=(xL+xR)/2;
+    const path=mk(svg,'path',{d:`M ${xL} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${xR} ${y2}`,fill:'none',stroke:col,'stroke-width':2.4,opacity:.85});
+    path.style.filter='drop-shadow(0 0 4px '+col+'66)';
+    mk(svg,'circle',{cx:xL,cy:y1,r:5,fill:'#05070f',stroke:col,'stroke-width':2});
+    mk(svg,'circle',{cx:xR,cy:y2,r:5,fill:'#05070f',stroke:col,'stroke-width':2});
+    mk(svg,'text',{x:xL-12,y:y1+4,fill:'#bfcae6','font-size':12.5,'text-anchor':'end','font-family':'sans-serif'},`${rC[d.nm]}. ${d.nm}`);
+    mk(svg,'text',{x:xR+12,y:y2+4,fill:improved?'#2ff5e0':'#eef4ff','font-size':12.5,'text-anchor':'start','font-family':'sans-serif'},`${d.nm} ·${d.asmr.toFixed(0)}`);
+  });
+})();
+
+/* ===== FOREST (ASMR + CI) ===== */
+(function(){
+  const svg=document.getElementById('forest'),W=640,H=360,m={t:30,b:46,l:78,r:30};
+  const have=REGIONS.filter(d=>d.asmr!=null).sort((a,b)=>b.asmr-a.asmr);
+  const lo=900,hi=1280,px=v=>m.l+(v-lo)/(hi-lo)*(W-m.l-m.r);
+  const n=have.length,yI=(H-m.t-m.b)/n,yC=i=>m.t+yI*i+yI/2;
+  for(let g=900;g<=1280;g+=100){mk(svg,'line',{x1:px(g),y1:m.t,x2:px(g),y2:H-m.b,stroke:'#0e1730','stroke-width':1});
+    mk(svg,'text',{x:px(g),y:H-m.b+20,fill:'#6d7ca2','font-size':11,'text-anchor':'middle','font-family':'monospace'},g);}
+  mk(svg,'text',{x:(m.l+W-m.r)/2,y:H-8,fill:'#bfcae6','font-size':11.5,'text-anchor':'middle','font-family':'monospace','letter-spacing':'.08em'},'年齢調整死亡率 (10万対・平成27モデル人口)');
+  have.forEach((d,i)=>{
+    const y=yC(i),top=d.nm==='延岡',bot=d.nm==='宮崎市';
+    const col=top?'#ff2e88':bot?'#2ff5e0':'#8b7bff';
+    mk(svg,'line',{x1:px(d.ci[0]),y1:y,x2:px(d.ci[1]),y2:y,stroke:col,'stroke-width':2,opacity:.7});
+    mk(svg,'line',{x1:px(d.ci[0]),y1:y-5,x2:px(d.ci[0]),y2:y+5,stroke:col,'stroke-width':2});
+    mk(svg,'line',{x1:px(d.ci[1]),y1:y-5,x2:px(d.ci[1]),y2:y+5,stroke:col,'stroke-width':2});
+    const dot=mk(svg,'circle',{cx:px(d.asmr),cy:y,r:6,fill:col});dot.style.filter='drop-shadow(0 0 6px '+col+')';
+    mk(svg,'text',{x:m.l-12,y:y+4,fill:top?'#ff2e88':bot?'#2ff5e0':'#bfcae6','font-size':12.5,'text-anchor':'end','font-family':'sans-serif'},d.nm);
+    mk(svg,'text',{x:px(d.ci[1])+10,y:y+4,fill:'#6d7ca2','font-size':11,'text-anchor':'start','font-family':'monospace'},d.asmr.toFixed(0));
+  });
+})();
+
+/* ===== MEDICAL bars ===== */
+(function(){
+  const box=document.getElementById('medBars');
+  const rows=[...REGIONS.filter(d=>d.nm!=='中央'||true)].map(d=>({nm:d.nm,md:d.md}));
+  rows.push({nm:'都城',md:210.4});
+  rows.sort((a,b)=>b.md-a.md);
+  const max=380, ref=282.2;
+  rows.forEach(r=>{
+    const top=r.md>=ref, col=top?'linear-gradient(90deg,var(--mag-deep),var(--mag))':'linear-gradient(90deg,var(--cy-deep),var(--cy))';
+    const row=document.createElement('div');row.className='med-row';
+    row.innerHTML=`<div class="nm">${r.nm}</div>
+      <div class="med-track"><div class="ref" style="left:${ref/max*100}%"></div><div class="bar" data-w="${Math.min(100,r.md/max*100)}" style="background:${col};box-shadow:0 0 10px ${top?'rgba(255,46,136,.3)':'rgba(47,245,224,.3)'}"></div></div>
+      <div class="val" style="color:${top?'var(--mag)':'var(--cy)'}">${r.md.toFixed(1)}</div>`;
+    box.appendChild(row);
+  });
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){
+    box.querySelectorAll('.bar').forEach((b,i)=>setTimeout(()=>b.style.width=b.dataset.w+'%',i*70));obs.disconnect();}}),{threshold:.25});
+  obs.observe(box);
+})();
+
+/* ===== DONUT ===== */
+(function(){
+  const svg=document.getElementById('donut');
+  const data=[{v:57.9,c:'#2ff5e0'},{v:28.2,c:'#8b7bff'},{v:10.2,c:'#ff2e88'},{v:3.7,c:'#33425f'}];
+  const cx=100,cy=100,r=70,sw=26;let a=-Math.PI/2;
+  data.forEach(d=>{const ang=d.v/100*Math.PI*2,a2=a+ang;
+    const x1=cx+r*Math.cos(a),y1=cy+r*Math.sin(a),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2),lg=ang>Math.PI?1:0;
+    const p=mk(svg,'path',{d:`M ${x1} ${y1} A ${r} ${r} 0 ${lg} 1 ${x2} ${y2}`,fill:'none',stroke:d.c,'stroke-width':sw,'stroke-dasharray':(r*ang)+' '+10000});
+    p.style.filter='drop-shadow(0 0 5px '+d.c+'88)';a=a2;});
+  mk(svg,'text',{x:cx,y:cy-4,'text-anchor':'middle',fill:'#eef4ff','font-size':24,'font-family':'monospace'},'451');
+  mk(svg,'text',{x:cx,y:cy+16,'text-anchor':'middle',fill:'#6d7ca2','font-size':11,'font-family':'monospace','letter-spacing':'.1em'},'件 / 3年');
+})();
+</script>
+
+
+<button class="btn3d" id="btn3d"><span class="dot"></span>3D 立体表示</button>
+<div id="geoOverlay"><div id="geo3d">
+<div id="app"></div>
+<div class="scan"></div>
+<div class="hud topbar">
+  <span class="led"></span><span>KRWORKS / GEO-VIZ</span><span class="sep">//</span>
+  <span class="t">宮崎9圏域 立体表示</span><span class="sep">//</span><span id="metricLabel">人口 × 高齢化率</span>
+  <span class="priv">公開可能データ</span><button class="gclose" id="g_close">✕ 2Dに戻る (ESC)</button>
+</div>
+<div class="hud legend">
+  <h3>凡例</h3>
+  <div style="font-size:11px;color:var(--txt)">色：高齢化率</div>
+  <div class="grad"></div><div class="gl"><span>28%</span><span>47%</span></div>
+  <div class="row">高さ：<b id="hLabel">人口（事業所→人口）</b></div>
+  <div class="row" style="color:var(--dim);font-size:10.5px;margin-top:11px">ドラッグ＝回転／ホイール＝ズーム</div>
+</div>
+<div class="hud flighthud" id="flighthud">
+  <div class="k">Altitude</div><div class="v" id="alt">—</div>
+  <div class="k">Speed</div><div class="v" id="spd">—</div>
+  <div class="k">Sector</div><div class="loc" id="loc">—</div>
+</div>
+<div class="hud panel">
+  <div class="seg" id="repSeg">
+    <button data-r="bars" class="on">棒</button><button data-r="spheres">球</button><button data-r="birds">鳥群</button>
+  </div>
+  <select class="sel" id="metricSel">
+    <option value="pop">高さ：人口</option>
+    <option value="deaths">高さ：死亡数</option>
+    <option value="cdr">高さ：粗死亡率</option>
+    <option value="age">高さ：高齢化率</option>
+    <option value="md">高さ：医師密度</option>
+  </select>
+  <button class="btn fly" id="flyBtn">▶ 飛行</button>
+  <button class="btn" id="resetBtn">⟲ 視点</button>
+</div>
+<div class="hint" id="hint">ドラッグで回転・ホイールでズーム／「飛行」で低空フライト</div>
+<div class="err" id="err">3D描画には three.js（CDN）の読み込みが必要です。<br>オフライン環境では表示できません。ネット接続を確認するか、軽量オフライン版をご依頼ください。</div>
+<div class="credit">輪郭: 国土数値情報(国土交通省) N03 を簡略化 / データ: 保健所業務概要 R7・厚労省統計</div>
+</div></div>
+<script>
+const OUTLINE=[131.4681,31.7208,131.4632,31.734,131.4742,31.7387,131.4684,31.7526,131.4736,31.7594,131.4772,31.7524,131.4885,31.785,131.4544,31.8158,131.4529,31.8612,131.4691,31.912,131.4727,31.912,131.4864,31.9231,131.4639,31.9136,131.4545,31.8985,131.4596,31.916,131.4752,31.9193,131.4731,31.9278,131.4729,31.9252,131.4671,31.9243,131.4725,31.9463,131.5401,32.1321,131.5453,32.1639,131.5549,32.1688,131.5482,32.1687,131.5754,32.2411,131.5777,32.2726,131.6008,32.3216,131.6147,32.3402,131.629,32.3424,131.6229,32.3581,131.6362,32.371,131.6327,32.3807,131.6435,32.4077,131.6899,32.4229,131.654,32.4289,131.6799,32.43,131.6746,32.4541,131.6761,32.4431,131.6622,32.4365,131.6641,32.4495,131.651,32.4348,131.6418,32.4391,131.6567,32.4473,131.6506,32.4602,131.6615,32.4701,131.6585,32.4823,131.6709,32.4769,131.6788,32.4836,131.6778,32.473,131.6954,32.4692,131.7167,32.4824,131.714,32.489,131.7289,32.4923,131.7254,32.5003,131.71,32.5026,131.7144,32.5198,131.7004,32.5179,131.7009,32.5057,131.6926,32.5151,131.6923,32.5076,131.6845,32.5092,131.6897,32.5197,131.6824,32.5419,131.6952,32.5695,131.7126,32.5897,131.7423,32.5917,131.7554,32.6028,131.7529,32.6107,131.7633,32.6135,131.7736,32.6401,131.7592,32.6411,131.7576,32.635,131.7506,32.6453,131.7654,32.6426,131.7645,32.6521,131.7711,32.6521,131.7624,32.6582,131.772,32.6579,131.7772,32.674,131.7861,32.6738,131.7898,32.662,131.7923,32.6776,131.8161,32.6872,131.8168,32.7028,131.8266,32.7066,131.8386,32.6914,131.851,32.6933,131.8563,32.6977,131.846,32.7077,131.8502,32.7221,131.865,32.7164,131.8581,32.7315,131.8771,32.7338,131.8857,32.7458,131.847,32.7359,131.8442,32.7766,131.8601,32.8061,131.8555,32.8232,131.8345,32.8197,131.8242,32.8299,131.7939,32.8219,131.7873,32.8336,131.7668,32.839,131.7376,32.833,131.7295,32.7997,131.7111,32.7724,131.6689,32.7666,131.5925,32.7753,131.5684,32.7541,131.5113,32.7703,131.5087,32.7841,131.5175,32.8008,131.4753,32.8372,131.437,32.8286,131.4212,32.8119,131.3644,32.8034,131.3486,32.8107,131.3497,32.8246,131.3405,32.8333,131.2652,32.8265,131.2454,32.7866,131.2345,32.7808,131.2465,32.7694,131.2351,32.7444,131.18,32.7121,131.1751,32.6719,131.1435,32.6763,131.1155,32.6421,131.1206,32.6053,131.1059,32.5891,131.108,32.5818,131.0462,32.5845,131.039,32.5544,131.0181,32.5469,131.0256,32.5211,131.0094,32.5154,131.007,32.4901,131.0164,32.4736,131.0199,32.4387,131.0436,32.4082,131.0681,32.4075,131.0693,32.3843,131.0799,32.3743,131.0743,32.3609,131.0965,32.3502,131.1119,32.33,131.0786,32.2812,131.0505,32.2858,131.0542,32.2671,131.0416,32.2579,131.0468,32.2443,131.0716,32.2369,131.069,32.2257,131.0842,32.2062,131.1005,32.2015,131.109,32.1601,131.0972,32.1522,131.0718,32.1603,131.0588,32.1548,131.0374,32.1702,131.0121,32.1743,130.9748,32.1371,130.9745,32.1208,130.9331,32.1161,130.906,32.1336,130.8691,32.1149,130.8624,32.1018,130.8383,32.1072,130.8208,32.0949,130.7756,32.1019,130.7594,32.0968,130.7516,32.1041,130.7419,32.0979,130.7352,32.1089,130.7035,32.077,130.7039,32.0577,130.7371,32.0477,130.7776,32.0159,130.782,31.9831,130.7946,31.9732,130.7999,31.9497,130.8656,31.9339,130.8824,31.9211,130.897,31.8878,130.9135,31.8864,130.8947,31.8782,130.8884,31.8486,130.875,31.8427,130.882,31.8317,130.8768,31.8158,130.8843,31.8054,130.9173,31.8041,130.9309,31.7857,130.9901,31.7778,130.9785,31.7516,131.0168,31.7473,131.0131,31.7131,131.0292,31.6969,131.0256,31.6669,131.0447,31.6544,131.0544,31.6334,131.0793,31.6602,131.1178,31.6293,131.1503,31.63,131.1644,31.6395,131.1884,31.6246,131.1864,31.6052,131.2054,31.5799,131.1889,31.5575,131.1969,31.5495,131.2008,31.5177,131.17,31.4999,131.1601,31.4595,131.1745,31.4499,131.1818,31.4565,131.1994,31.4547,131.1999,31.4486,131.2058,31.4532,131.2056,31.4449,131.2189,31.4401,131.2277,31.4242,131.2335,31.4303,131.2431,31.4262,131.2355,31.4053,131.2539,31.3807,131.3093,31.3907,131.3232,31.3652,131.3359,31.3607,131.3492,31.3664,131.3338,31.3826,131.3376,31.3968,131.3325,31.3963,131.3456,31.3987,131.3435,31.4121,131.3712,31.4283,131.3723,31.4495,131.3633,31.4561,131.363,31.4718,131.3896,31.4851,131.3855,31.5024,131.3731,31.5069,131.3784,31.5127,131.373,31.5183,131.3832,31.5111,131.387,31.5233,131.3804,31.5335,131.3898,31.5429,131.3841,31.5413,131.3817,31.5544,131.3976,31.5588,131.3911,31.5642,131.4022,31.5714,131.4011,31.582,131.4098,31.5759,131.406,31.5633,131.4181,31.6034,131.4566,31.6241,131.4622,31.6332,131.4528,31.6391,131.4581,31.6467,131.4693,31.6453,131.4577,31.6584,131.4616,31.6696,131.4521,31.6696,131.4503,31.6797,131.4688,31.6864,131.456,31.6973,131.463,31.7036,131.4598,31.7181,131.4681,31.7208];
+const BBOX=[130.7035,31.3607,131.8857,32.839];
+(function(){
+  let built=false, active=false, animate=null, loading=false;
+  function loadThree(cb){
+    if(window.THREE){cb();return;}
+    if(loading)return; loading=true;
+    var sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    sc.onload=function(){cb();};
+    sc.onerror=function(){var e=document.getElementById('err');if(e)e.classList.add('show');};
+    document.head.appendChild(sc);
+  }
+  function build(){
+    active=true;
+
+  
+  const SITES=[
+    {nm:'宮崎市',lon:131.42,lat:31.91,pop:401339,deaths:4852,cdr:12.09,age:28.3,md:374.7,active:true},
+    {nm:'延岡',  lon:131.66,lat:32.58,pop:111543,deaths:2058,cdr:18.45,age:36.1,md:227.7,active:true},
+    {nm:'日向',  lon:131.62,lat:32.42,pop:81092, deaths:1389,cdr:17.13,age:36.5,md:182.5,active:true},
+    {nm:'高鍋',  lon:131.50,lat:32.12,pop:91149, deaths:1636,cdr:17.95,age:37.2,md:162.4,active:true},
+    {nm:'中央',  lon:131.40,lat:32.06,pop:24149, deaths:444, cdr:18.39,age:39.5,md:132.5,active:true},
+    {nm:'日南',  lon:131.38,lat:31.60,pop:62307, deaths:1322,cdr:21.22,age:42.2,md:277.7,active:true},
+    {nm:'小林',  lon:130.97,lat:31.99,pop:65062, deaths:1306,cdr:20.07,age:41.6,md:198.3,active:true},
+    {nm:'高千穂',lon:131.31,lat:32.71,pop:16838, deaths:380, cdr:22.57,age:46.8,md:160.4,active:true},
+    {nm:'都城',  lon:131.06,lat:31.72,pop:0,deaths:0,cdr:0,age:0,md:210.4,active:false},
+  ];
+  const app=document.getElementById('app');
+  const W=()=>app.clientWidth,H=()=>app.clientHeight;
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x05070f);
+  scene.fog=new THREE.FogExp2(0x05070f,0.0030);
+  const camera=new THREE.PerspectiveCamera(58,W()/H(),0.1,2000);
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setSize(W(),H());
+  app.appendChild(renderer.domElement);
+
+  // ---- geo transform ----
+  const cx=(BBOX[0]+BBOX[2])/2, cz=(BBOX[1]+BBOX[3])/2;
+  const K=150/(BBOX[3]-BBOX[1]);
+  const kx=Math.cos(32*Math.PI/180)*K;
+  const wx=lon=>(lon-cx)*kx, wz=lat=>-(lat-cz)*K;
+
+  // ---- outline ----
+  const olPts=[];
+  for(let i=0;i<OUTLINE.length;i+=2) olPts.push(new THREE.Vector3(wx(OUTLINE[i]),0.4,wz(OUTLINE[i+1])));
+  function makeLine(pts,color,op,y){const g=new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(p.x,y,p.z)));
+    return new THREE.LineLoop(g,new THREE.LineBasicMaterial({color,transparent:true,opacity:op}));}
+  scene.add(makeLine(olPts,0xffffff,0.95,0.5));
+  const glow=makeLine(olPts,0x2ff5e0,0.25,0.18);glow.material.blending=THREE.AdditiveBlending;scene.add(glow);
+
+  // ---- grid floor ----
+  const grid=new THREE.GridHelper(260,52,0x1b3a5a,0x122237);
+  grid.material.transparent=true;grid.material.opacity=0.5;scene.add(grid);
+
+  // ---- color ramp by age ----
+  const cA=new THREE.Color(0x2ff5e0),cB=new THREE.Color(0x8b7bff),cC=new THREE.Color(0xff2e88);
+  function ageColor(age){const t=Math.max(0,Math.min(1,(age-28)/(47-28)));const c=new THREE.Color();
+    if(t<0.5)c.lerpColors(cA,cB,t/0.5);else c.lerpColors(cB,cC,(t-0.5)/0.5);return c;}
+  function heartbeat(t,period,phase){const x=((t/period+phase)%1+1)%1;
+    const b1=Math.exp(-Math.pow((x-0.00)/0.045,2));
+    const b2=Math.exp(-Math.pow((x-0.17)/0.050,2))*0.78;
+    return Math.max(b1,b2);}
+
+  const metricMax={};['pop','deaths','cdr','age','md'].forEach(m=>{metricMax[m]=Math.max.apply(null,SITES.filter(s=>s.active).map(s=>s[m]));});
+  const HMAX=78, HMIN=4;
+  function heightFor(s,metric){if(!s.active)return 6;const v=s[metric]/metricMax[metric];return HMIN+v*(HMAX-HMIN);}
+
+  // ---- label sprite ----
+  function labelSprite(text,sub,color){
+    const c=document.createElement('canvas');c.width=256;c.height=96;const x=c.getContext('2d');
+    x.fillStyle='rgba(5,7,15,0.0)';x.fillRect(0,0,256,96);
+    x.font='bold 38px system-ui,"Hiragino Sans","Noto Sans JP",sans-serif';x.textAlign='center';x.textBaseline='middle';
+    x.shadowColor=color;x.shadowBlur=14;x.fillStyle='#eef4ff';x.fillText(text,128,34);
+    x.shadowBlur=0;x.font='600 26px ui-monospace,monospace';x.fillStyle=color;x.fillText(sub,128,70);
+    const tex=new THREE.CanvasTexture(c);tex.anisotropy=2;
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
+    sp.scale.set(22,8.25,1);return sp;
+  }
+
+  // ---- build per-site groups ----
+  const barsGroup=new THREE.Group(),sphGroup=new THREE.Group(),birdGroup=new THREE.Group(),labelGroup=new THREE.Group();
+  scene.add(barsGroup,sphGroup,birdGroup,labelGroup);
+  const birdData=[];
+  SITES.forEach(s=>{
+    s.x=wx(s.lon);s.z=wz(s.lat);
+    const col=s.active?ageColor(s.age):new THREE.Color(0x33425f);
+    const h=heightFor(s,'pop');
+    // BAR
+    const bg=new THREE.BoxGeometry(5,1,5);
+    const bar=new THREE.Mesh(bg,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:s.active?0.62:0.28}));
+    bar.position.set(s.x,0.5,s.z);bar.scale.y=h;bar.position.y=h/2;
+    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(bg),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:s.active?0.9:0.4}));
+    bar.add(edges);
+    // top glow cap
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(5.4,1.4,5.4),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.55,blending:THREE.AdditiveBlending}));
+    cap.position.set(s.x,h,s.z);barsGroup.add(cap);
+    s._cap=cap;
+    barsGroup.add(bar);s._bar=bar;
+    // SPHERE
+    const sr=s.active?(2.2+Math.sqrt(s.pop/metricMax.pop)*5):2;
+    const sph=new THREE.Mesh(new THREE.SphereGeometry(sr,20,16),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending}));
+    sph.position.set(s.x,h,s.z);
+    const core=new THREE.Mesh(new THREE.SphereGeometry(sr*0.45,16,12),new THREE.MeshBasicMaterial({color:col}));
+    sph.add(core);
+    const stem=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(s.x,0.4,s.z),new THREE.Vector3(s.x,h,s.z)]),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.3}));
+    sphGroup.add(sph,stem);s._sph=sph;s._sphR=sr;
+    // BIRDS
+    if(s.active){
+      const n=Math.round((14+s.pop/metricMax.pop*40)*2);
+      const pos=new Float32Array(n*3);const colr=new Float32Array(n*3);
+      const seeds=[];
+      for(let i=0;i<n;i++){seeds.push({a:Math.random()*6.28,r:5+Math.random()*7,yb:h*0.5+Math.random()*h*0.5,sp:0.5+Math.random(),ph:Math.random()*6.28});
+        colr[i*3]=col.r;colr[i*3+1]=col.g;colr[i*3+2]=col.b;}
+      const bgeo=new THREE.BufferGeometry();bgeo.setAttribute('position',new THREE.BufferAttribute(pos,3));bgeo.setAttribute('color',new THREE.BufferAttribute(colr,3));
+      const pts=new THREE.Points(bgeo,new THREE.PointsMaterial({size:1.8,vertexColors:true,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+      birdGroup.add(pts);birdData.push({s,pts,seeds,pos});
+    }
+    // LABEL
+    const lab=labelSprite(s.nm, s.active?String(s.pop.toLocaleString()):'N/A', '#'+col.getHexString());
+    lab.position.set(s.x,h+9,s.z);labelGroup.add(lab);s._lab=lab;
+  });
+  sphGroup.visible=false;birdGroup.visible=false;
+
+  // rebuild heights on metric change
+  function applyMetric(metric){
+    SITES.forEach(s=>{const h=heightFor(s,metric);
+      s._bar.scale.y=h;s._bar.position.y=h/2;s._cap.position.y=h;
+      s._sph.position.y=h;
+      s._lab.position.y=h+9;
+      const sub = !s.active?'N/A': metric==='pop'?s.pop.toLocaleString(): metric==='deaths'?s.deaths.toLocaleString(): metric==='cdr'?s.cdr.toFixed(1)+'‰': metric==='age'?s.age+'%': s.md.toFixed(0);
+      // update label texture
+      const col=s.active?ageColor(s.age):new THREE.Color(0x33425f);
+      const ns=labelSprite(s.nm,sub,'#'+col.getHexString());s._lab.material.map=ns.material.map;s._lab.material.needsUpdate=true;
+      s._h=h;
+    });
+    const names={pop:'人口',deaths:'死亡数',cdr:'粗死亡率',age:'高齢化率',md:'医師密度'};
+    document.getElementById('metricLabel').textContent=names[metric]+' × 高齢化率';
+    document.getElementById('hLabel').textContent=names[metric];
+    rebuildFlightPath();
+  }
+  SITES.forEach(s=>s._h=heightFor(s,'pop'));
+
+  // ---- camera orbit ----
+  const target=new THREE.Vector3(0,10,0);
+  let camR=168, camTheta=0.5, camPhi=0.90, autoRot=true;
+  function placeCam(){const sp=Math.sin(camPhi);
+    camera.position.set(target.x+camR*sp*Math.cos(camTheta),target.y+camR*Math.cos(camPhi),target.z+camR*sp*Math.sin(camTheta));
+    camera.lookAt(target);}
+  placeCam();
+  let drag=false,px=0,py=0;
+  renderer.domElement.addEventListener('pointerdown',e=>{drag=true;autoRot=false;px=e.clientX;py=e.clientY;});
+  window.addEventListener('pointerup',()=>drag=false);
+  window.addEventListener('pointermove',e=>{if(!drag||flying)return;camTheta-=(e.clientX-px)*0.005;camPhi=Math.max(0.18,Math.min(1.45,camPhi-(e.clientY-py)*0.005));px=e.clientX;py=e.clientY;});
+  renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();camR=Math.max(70,Math.min(420,camR+e.deltaY*0.15));},{passive:false});
+
+  // ---- flight path ----
+  let curve=null,flying=false,ft=0;
+  const order=['宮崎市','中央','高鍋','日向','延岡','高千穂','小林','都城','日南'];
+  function rebuildFlightPath(){
+    const pts=[];const byNm={};SITES.forEach(s=>byNm[s.nm]=s);
+    pts.push(new THREE.Vector3(byNm['日南'].x*0.3, 96, byNm['日南'].z+70));
+    order.forEach((nm,i)=>{const s=byNm[nm];const off=(i%2?1:-1)*11;const alt=Math.max(11,(s._h||10)*0.6+9+(i%3)*5);
+      pts.push(new THREE.Vector3(s.x+off, alt, s.z+off*0.6));
+      pts.push(new THREE.Vector3(s.x-off*0.7, alt+5, s.z-7));});
+    pts.push(new THREE.Vector3(byNm['宮崎市'].x-13, 16, byNm['宮崎市'].z-13));
+    curve=new THREE.CatmullRomCurve3(pts,true,'catmullrom',0.5);
+  }
+  rebuildFlightPath();
+  function nearestSector(p){let best='—',bd=1e9;SITES.forEach(s=>{const d=(s.x-p.x)**2+(s.z-p.z)**2;if(d<bd){bd=d;best=s.nm;}});return best;}
+
+  // ---- UI ----
+  document.getElementById('repSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    [...e.currentTarget.children].forEach(c=>c.classList.remove('on'));b.classList.add('on');
+    const r=b.dataset.r;barsGroup.visible=(r==='bars');sphGroup.visible=(r==='spheres');birdGroup.visible=(r==='birds');});
+  document.getElementById('metricSel').addEventListener('change',e=>applyMetric(e.target.value));
+  document.getElementById('resetBtn').addEventListener('click',()=>{camR=168;camTheta=0.5;camPhi=0.90;autoRot=true;});
+  const flyBtn=document.getElementById('flyBtn'),fhud=document.getElementById('flighthud'),hint=document.getElementById('hint');
+  flyBtn.addEventListener('click',()=>{flying=!flying;ft=0;flyBtn.classList.toggle('active',flying);fhud.classList.toggle('show',flying);
+    flyBtn.textContent=flying?'■ 停止':'▶ 飛行';hint.style.display=flying?'none':'block';if(!flying){autoRot=true;}});
+
+  // ---- loop ----
+  const clock=new THREE.Clock();
+  animate=function(){
+    if(!active){return;}
+    requestAnimationFrame(animate);
+    const dt=Math.min(clock.getDelta(),0.05),t=clock.elapsedTime;
+    if(birdGroup.visible){birdData.forEach(b=>{const a=b.pos;b.seeds.forEach((sd,i)=>{const ang=sd.a+t*sd.sp;const rr=sd.r*(0.8+0.2*Math.sin(t*1.3+sd.ph));
+      a[i*3]=b.s.x+Math.cos(ang)*rr;a[i*3+1]=sd.yb+Math.sin(t*1.7+sd.ph)*3.5;a[i*3+2]=b.s.z+Math.sin(ang)*rr;});
+      b.pts.geometry.attributes.position.needsUpdate=true;});}
+    if(sphGroup.visible){SITES.forEach((s,i)=>{if(!s._sph)return;const hb=heartbeat(t,0.95,i*0.055);
+      s._sph.scale.setScalar(1+0.30*hb);s._sph.material.opacity=0.38+0.52*hb;
+      if(s._sph.children[0])s._sph.children[0].material.opacity=0.6+0.4*hb;});}
+    if(flying&&curve){ft=(ft+dt*0.022)%1;const p=curve.getPointAt(ft),la=curve.getPointAt((ft+0.006)%1);
+      camera.position.copy(p);camera.lookAt(la);
+      document.getElementById('alt').textContent=Math.round(p.y*60)+' m';
+      document.getElementById('spd').textContent=Math.round(220+80*Math.sin(t))+' km/h';
+      document.getElementById('loc').textContent=nearestSector(p);
+    }else{
+      if(autoRot)camTheta+=dt*0.06;placeCam();
+    }
+    labelGroup.children.forEach(l=>{const d=camera.position.distanceTo(l.position);l.material.opacity=Math.max(0.15,Math.min(1,(380-d)/300));});
+    renderer.render(scene,camera);
+  }
+  animate();
+  window.addEventListener('resize',()=>{camera.aspect=W()/H();camera.updateProjectionMatrix();renderer.setSize(W(),H());});
+
+  }
+  const ov=document.getElementById('geoOverlay');
+  document.getElementById('btn3d').addEventListener('click',function(){
+    ov.classList.add('show');document.body.style.overflow='hidden';
+    if(!built){loadThree(function(){try{build();built=true;}catch(err){var e=document.getElementById('err');if(e)e.classList.add('show');console.error(err);}});}
+    else{active=true;if(animate)animate();}
+  });
+  function closeGeo(){ov.classList.remove('show');document.body.style.overflow='';active=false;}
+  document.getElementById('g_close').addEventListener('click',closeGeo);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&ov.classList.contains('show'))closeGeo();});
+})();
+</script>
+</body>
+</html>

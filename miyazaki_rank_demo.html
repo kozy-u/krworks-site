@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>順位逆転 // 年齢を揃えると地図が変わる</title>
+<style>
+:root{
+  --void:#05070f; --panel:rgba(13,19,38,.72); --grid:#13203f; --line:#1b2a4f;
+  --cy:#2ff5e0; --mag:#ff2e88; --amb:#ffb12e; --dim:#6d7ca2; --txt:#bfcae6; --bright:#eef4ff;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,'Courier New',monospace;
+  --font-sans:system-ui,-apple-system,'Hiragino Sans','Noto Sans JP','Yu Gothic',Meiryo,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--txt);font-family:var(--font-sans);line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(1100px 700px at 80% -10%, rgba(47,245,224,.06), transparent 60%),
+    radial-gradient(900px 600px at 4% 10%, rgba(255,46,136,.05), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(20,33,66,.25) 38px 39px),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(20,33,66,.25) 38px 39px);}
+body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);opacity:.5}
+.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:0 22px}
+.statusbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:10px 22px;
+  background:linear-gradient(180deg,rgba(5,7,15,.96),rgba(5,7,15,.78));border-bottom:1px solid var(--line);backdrop-filter:blur(6px);
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.statusbar .led{width:7px;height:7px;border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy);animation:pulse 2.4s infinite}
+.statusbar .sep{color:#2b3a5e}
+.statusbar .priv{color:var(--cy);border:1px solid rgba(47,245,224,.4);padding:2px 8px;border-radius:2px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.head{padding:54px 0 22px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.4em;color:var(--cy);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.eyebrow::before{content:"";width:42px;height:1px;background:linear-gradient(90deg,var(--cy),transparent)}
+h1{font-family:var(--font-mono);font-weight:700;font-size:clamp(26px,5vw,46px);line-height:1.05;color:var(--bright)}
+h1 .f{color:var(--cy);text-shadow:0 0 22px rgba(47,245,224,.35)}
+.sub{max-width:680px;color:var(--dim);font-size:14px;margin-top:14px}
+.stage{position:relative;margin-top:24px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(3px)}
+.stage::before,.stage::after{content:"";position:absolute;width:13px;height:13px;border:1px solid var(--cy);opacity:.5;z-index:3}
+.stage::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.stage::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+#cv{display:block;width:100%;height:auto;background:transparent}
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line);font-family:var(--font-mono);font-size:12px;color:var(--dim)}
+.btn{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--cy);background:rgba(47,245,224,.06);
+  border:1px solid rgba(47,245,224,.4);padding:7px 16px;border-radius:2px;cursor:pointer;transition:.15s}
+.btn:hover{background:rgba(47,245,224,.14);box-shadow:0 0 12px rgba(47,245,224,.2)}
+.btn:active{transform:scale(.97)}
+.leg{display:flex;gap:18px;margin-left:auto;flex-wrap:wrap}
+.leg .it{display:flex;align-items:center;gap:8px}
+.leg .ln{width:20px;height:2px}
+.note{font-family:var(--font-mono);font-size:11px;color:#4a5a7e;margin-top:16px;padding-bottom:54px;line-height:1.7}
+@media(prefers-reduced-motion:reduce){.statusbar .led{animation:none}}
+</style>
+</head>
+<body>
+<div class="statusbar">
+  <span class="led"></span><span>KRWORKS / RANK INVERSION</span><span class="sep">//</span>
+  <span>宮崎7圏域</span><span class="sep">//</span><span>粗死亡率 → 年齢調整死亡率</span>
+  <span class="priv" style="margin-left:auto">公開可能データ</span>
+</div>
+<div class="wrap">
+  <div class="head">
+    <div class="eyebrow">Age-Adjustment Morph</div>
+    <h1>年齢を揃えると<span class="f">地図が変わる</span></h1>
+    <p class="sub">左の並びは粗死亡率の順位（上＝最も高い）。年齢構造を全圏域で揃えると、各圏域が新しい順位へ走って再整列する。高千穂は最悪から最良級へ急降下、延岡は上昇——年齢で説明できない残差。</p>
+  </div>
+  <div class="stage">
+    <canvas id="cv" role="img" aria-label="粗死亡率の順位から年齢調整死亡率の順位へ、7圏域が再整列するアニメーション。高千穂が大きく順位を下げ、延岡が最上位へ上がる。"></canvas>
+    <div class="bar">
+      <button class="btn" id="toggle">⏸ 一時停止</button>
+      <button class="btn" id="replay">↻ 最初から</button>
+      <div class="leg">
+        <span class="it"><span class="ln" style="background:var(--cy)"></span>年齢調整で改善（順位低下）</span>
+        <span class="it"><span class="ln" style="background:var(--mag)"></span>悪化（残差・順位上昇）</span>
+      </div>
+    </div>
+  </div>
+  <p class="note">年齢調整死亡率＝直接法・平成27年モデル人口基準。小林は年齢別死亡数欠で除外（7圏域表示）。<br>出典: 圏域別死亡＝保健所業務概要 令和7年度版／年齢調整の基準＝厚労省 令和5年人口動態統計・平成27モデル人口。</p>
+</div>
+
+<script>
+const REG = [
+  {nm:'高千穂', crude:22.57, asmr:1053.3},
+  {nm:'日南',   crude:21.22, asmr:1135.7},
+  {nm:'延岡',   crude:18.45, asmr:1184.9},
+  {nm:'中央',   crude:18.39, asmr:1120.2},
+  {nm:'高鍋',   crude:17.95, asmr:1144.1},
+  {nm:'日向',   crude:17.13, asmr:1104.8},
+  {nm:'宮崎市', crude:12.09, asmr:995.8},
+];
+const N=REG.length;
+const rk=(key,desc)=>{const s=[...REG].sort((a,b)=>desc?b[key]-a[key]:a[key]-b[key]);const m={};s.forEach((d,i)=>m[d.nm]=i+1);return m;};
+const rCrude=rk('crude',true), rAsmr=rk('asmr',true);
+REG.forEach(d=>{d.rc=rCrude[d.nm];d.ra=rAsmr[d.nm];
+  d.trend = d.ra>d.rc?'imp':(d.ra<d.rc?'wor':'eq');
+  d.col = d.trend==='imp'?'#2ff5e0':d.trend==='wor'?'#ff2e88':'#5fb6c9';});
+
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const W=920,H=560,dpr=Math.min(window.devicePixelRatio||1,2);
+cv.width=W*dpr; cv.height=H*dpr; cv.style.aspectRatio=W+'/'+H; ctx.scale(dpr,dpr);
+const xL=240, xR=680, mid=(xL+xR)/2, mTop=96, mBot=70;
+const yRank=r=>mTop+(r-1)/(N-1)*(H-mTop-mBot);
+function bez(p,y0,y1){const t=p,mt=1-t;
+  const x=mt*mt*mt*xL+3*mt*mt*t*mid+3*mt*t*t*mid+t*t*t*xR;
+  const y=mt*mt*mt*y0+3*mt*mt*t*y0+3*mt*t*t*y1+t*t*t*y1;
+  return {x,y};}
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+
+const HOLD_A=900, FWD=2600, HOLD_B=1700, BACK=2600, CYCLE=HOLD_A+FWD+HOLD_B+BACK;
+let startT=null, paused=false, pauseAccum=0, pauseStart=0;
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+function phase(elapsed){
+  const t=elapsed%CYCLE;
+  if(t<HOLD_A) return {p:0,label:'CRUDE',status:'粗死亡率順位'};
+  if(t<HOLD_A+FWD) return {p:ease((t-HOLD_A)/FWD),label:'FWD',status:'▸▸ 年齢で調整中'};
+  if(t<HOLD_A+FWD+HOLD_B) return {p:1,label:'ASMR',status:'年齢調整死亡率順位'};
+  return {p:ease(1-(t-HOLD_A-FWD-HOLD_B)/BACK),label:'BACK',status:'◂◂ 粗死亡率へ戻す'};
+}
+function line(x1,y1,x2,y2,c,w,a){ctx.globalCompositeOperation='source-over';ctx.strokeStyle=c;ctx.globalAlpha=a==null?1:a;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.globalAlpha=1;}
+function text(s,x,y,c,size,align,font){ctx.globalCompositeOperation='source-over';ctx.fillStyle=c;ctx.font=(size)+'px '+(font||"ui-monospace,'SF Mono',Menlo,monospace");ctx.textAlign=align||'left';ctx.textBaseline='middle';ctx.fillText(s,x,y);}
+
+function frame(now){
+  if(startT==null)startT=now;
+  let elapsed=now-startT-pauseAccum;
+  if(paused)elapsed=pauseStart-startT-pauseAccum;
+  if(reduce)elapsed=HOLD_A+FWD;
+  const {p,status}=phase(Math.max(0,elapsed));
+
+  ctx.globalCompositeOperation='destination-out';
+  ctx.fillStyle='rgba(0,0,0,0.085)'; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='source-over';
+
+  for(let r=1;r<=N;r++){const y=yRank(r);
+    line(xL,y,xR,y,'#0e1730',1,1);
+    text(String(r),xL-58,y,'#3f4d70',12,'right');
+    text(String(r),xR+50,y,'#3f4d70',12,'left');}
+  text('粗死亡率 順位', xL, 56, p<0.5?'#eef4ff':'#6d7ca2', 14, 'center');
+  text('年齢調整死亡率 順位', xR, 56, p>=0.5?'#eef4ff':'#6d7ca2', 14, 'center');
+  line(mid,mTop-22,mid,H-mBot+18,'#16213f',1,.6);
+  text(status, mid, H-30, status.includes('▸')||status.includes('◂')?'#ff2e88':'#2ff5e0', 13,'center');
+
+  REG.forEach(d=>{
+    const y0=yRank(d.rc), y1=yRank(d.ra);
+    ctx.globalCompositeOperation='source-over';
+    ctx.strokeStyle=d.col; ctx.globalAlpha=.42; ctx.lineWidth=2; ctx.beginPath();
+    const steps=42, upto=Math.max(0.001,p);
+    for(let i=0;i<=steps;i++){const tt=upto*i/steps;const pt=bez(tt,y0,y1);i===0?ctx.moveTo(pt.x,pt.y):ctx.lineTo(pt.x,pt.y);}
+    ctx.stroke(); ctx.globalAlpha=1;
+    text(d.nm, xL-72, y0, p<0.85?'#bfcae6':'#46546f', 12.5,'right',"system-ui,'Hiragino Sans','Noto Sans JP',sans-serif");
+    text(d.crude.toFixed(1), xR+62, y0, '#34425f', 11,'left');
+    if(p>0.15){text(d.nm, xR+72, y1, p>0.85?'#eef4ff':'#46546f', 12.5,'left',"system-ui,'Hiragino Sans','Noto Sans JP',sans-serif");
+      text(d.asmr.toFixed(0), xL-62, y1, '#34425f', 11,'right');}
+  });
+
+  ctx.globalCompositeOperation='lighter';
+  REG.forEach(d=>{
+    const y0=yRank(d.rc), y1=yRank(d.ra), pt=bez(p,y0,y1);
+    const g=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,16);
+    g.addColorStop(0,d.col); g.addColorStop(.4,d.col+'88'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(pt.x,pt.y,16,0,7); ctx.fill();
+    ctx.fillStyle=d.col; ctx.beginPath(); ctx.arc(pt.x,pt.y,4.5,0,7); ctx.fill();
+  });
+  ctx.globalCompositeOperation='source-over';
+  REG.forEach(d=>{const y0=yRank(d.rc), y1=yRank(d.ra), pt=bez(p,y0,y1);
+    ctx.fillStyle='#05070f'; ctx.beginPath(); ctx.arc(pt.x,pt.y,2,0,7); ctx.fill();});
+
+  if(!reduce)requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+const tg=document.getElementById('toggle');
+tg.addEventListener('click',()=>{
+  paused=!paused;
+  if(paused){pauseStart=performance.now();tg.textContent='▶ 再生';}
+  else{pauseAccum+=performance.now()-pauseStart;tg.textContent='⏸ 一時停止';requestAnimationFrame(frame);}
+});
+document.getElementById('replay').addEventListener('click',()=>{
+  startT=performance.now();pauseAccum=0;if(paused){paused=false;tg.textContent='⏸ 一時停止';requestAnimationFrame(frame);}
+});
+if(reduce){tg.style.display='none';document.getElementById('replay').style.display='none';}
+</script>
+</body>
+</html>

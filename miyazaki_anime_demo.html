@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宮崎9圏域 // アニメ集</title>
+<style>
+:root{
+  --void:#05070f; --panel:rgba(13,19,38,.72); --grid:#13203f; --line:#1b2a4f;
+  --cy:#2ff5e0; --mag:#ff2e88; --amb:#ffb12e; --vio:#8b7bff; --dim:#6d7ca2; --txt:#bfcae6; --bright:#eef4ff;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,'Courier New',monospace;
+  --font-sans:system-ui,-apple-system,'Hiragino Sans','Noto Sans JP','Yu Gothic',Meiryo,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--txt);font-family:var(--font-sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(1100px 700px at 80% -10%, rgba(47,245,224,.06), transparent 60%),
+    radial-gradient(900px 600px at 4% 10%, rgba(255,46,136,.05), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(20,33,66,.25) 38px 39px),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(20,33,66,.25) 38px 39px);}
+body::after{content:"";position:fixed;inset:0;z-index:50;pointer-events:none;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);opacity:.5}
+.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:0 22px}
+.statusbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:10px 22px;
+  background:linear-gradient(180deg,rgba(5,7,15,.96),rgba(5,7,15,.78));border-bottom:1px solid var(--line);backdrop-filter:blur(6px);
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.statusbar .led{width:7px;height:7px;border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy);animation:pulse 2.4s infinite}
+.statusbar .sep{color:#2b3a5e}
+.statusbar .priv{color:var(--cy);border:1px solid rgba(47,245,224,.4);padding:2px 8px;border-radius:2px;margin-left:auto}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.head{padding:50px 0 14px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.4em;color:var(--cy);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:14px}
+.eyebrow::before{content:"";width:42px;height:1px;background:linear-gradient(90deg,var(--cy),transparent)}
+h1{font-family:var(--font-mono);font-weight:700;font-size:clamp(26px,5vw,46px);line-height:1.05;color:var(--bright)}
+h1 .f{color:var(--cy);text-shadow:0 0 22px rgba(47,245,224,.35)}
+.sub{max-width:680px;color:var(--dim);font-size:14px;margin-top:14px}
+section{padding:34px 0;border-top:1px solid #0e1730}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+.sec-no{font-family:var(--font-mono);font-size:12px;color:var(--mag);letter-spacing:.2em}
+.sec-title{font-family:var(--font-mono);font-size:clamp(18px,3vw,23px);color:var(--bright);font-weight:600}
+.sec-tag{margin-left:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:3px 10px;border-radius:2px;color:var(--cy);border:1px solid rgba(47,245,224,.4);background:rgba(47,245,224,.06)}
+.sec-tag.m{color:var(--mag);border-color:rgba(255,46,136,.4);background:rgba(255,46,136,.06)}
+.cap{color:var(--dim);font-size:13.5px;max-width:760px;margin:4px 0 18px}.cap b{color:var(--txt)}
+.stage{position:relative;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(3px)}
+.stage::before,.stage::after{content:"";position:absolute;width:13px;height:13px;border:1px solid var(--cy);opacity:.5;z-index:3}
+.stage::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.stage::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.stage.center{display:flex;justify-content:center}
+canvas{display:block;width:100%;height:auto;background:transparent}
+canvas.fix{width:auto;max-width:100%}
+.note{font-family:var(--font-mono);font-size:11px;color:#4a5a7e;margin:22px 0 54px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="statusbar">
+  <span class="led"></span><span>KRWORKS / ANIMATED SET</span><span class="sep">//</span>
+  <span>宮崎9圏域</span><span class="sep">//</span><span>4 charts</span>
+  <span class="priv">公開可能データ</span>
+</div>
+<div class="wrap">
+  <div class="head">
+    <div class="eyebrow">Animated Charts</div>
+    <h1>宮崎9圏域 <span class="f">アニメ集</span></h1>
+    <p class="sub">各グラフがスクロールで視界に入ると起動し、ループする。データは公開可能版（粗死亡率・年齢調整死亡率・自然増減・脳卒中病型）。順位逆転モーフは別ファイル。</p>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-no">01</span><span class="sec-title">レーダースイープ — 高齢化率 → 粗死亡率</span><span class="sec-tag">RADAR LOCK</span></div>
+    <p class="cap">走査ビームが左から掃引し、通過した圏域が点灯。掃引後に<b>回帰トラジェクトリがロックオン</b>。粗死亡率は高齢化率にほぼ線形（r=0.975）。</p>
+    <div class="stage"><canvas id="c1" role="img" aria-label="高齢化率と粗死亡率の散布図がレーダー走査で出現し回帰直線が引かれるアニメーション"></canvas></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-no">02</span><span class="sec-title">ソナー展開 — 年齢調整死亡率 ± 95%CI</span><span class="sec-tag m">SONAR</span></div>
+    <p class="cap">各圏域の点が上から順に出現し、信頼区間が中心から外へ展開＋ソナーリングが発振。<b>延岡（最高）と宮崎市（最低）はCI非重複</b>。</p>
+    <div class="stage"><canvas id="c2" role="img" aria-label="年齢調整死亡率と信頼区間が中心から外へ展開するソナー風アニメーション"></canvas></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-no">03</span><span class="sec-title">波及カスケード — 自然増減率</span><span class="sec-tag m">CASCADE</span></div>
+    <p class="cap">バーが深い順に時間差で右から伸び、エネルギーが連鎖する。<b>9圏域すべてが負</b>＝人口自然減。高齢化が深いほど減少も深い。</p>
+    <div class="stage"><canvas id="c3" role="img" aria-label="自然増減率のバーが深い順に時間差で伸びる波及アニメーション。全圏域が負。"></canvas></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-no">04</span><span class="sec-title">アーク掃引 — 脳卒中病型</span><span class="sec-tag">SWEEP</span></div>
+    <p class="cap">病型構成（3年451件）が時計回りに描き起こされる。脳梗塞57.9%・脳内出血28.2%・くも膜下10.2%＝県・全国とほぼ同一。</p>
+    <div class="stage center"><canvas id="c4" class="fix" role="img" aria-label="脳卒中病型構成のドーナツが時計回りに描かれるアニメーション"></canvas></div>
+  </section>
+
+  <p class="note">出典: 圏域別死亡・自然増減＝保健所業務概要 令和7年度版／年齢調整＝厚労省 令和5年人口動態統計・平成27モデル人口／脳卒中病型＝宮崎県衛生統計年報 第75–77号。<br>SINGLE-FILE / NO EXTERNAL CALL / 2026-06-25 / 合同会社KRWORKS</p>
+</div>
+
+<script>
+(function(){
+  const C={void:'#05070f',cy:'#2ff5e0',mag:'#ff2e88',amb:'#ffb12e',vio:'#8b7bff',dim:'#6d7ca2',txt:'#bfcae6',bright:'#eef4ff',grid:'#13203f',gridS:'#0e1730'};
+  const MONO="ui-monospace,'SF Mono',Menlo,monospace", SANS="system-ui,'Hiragino Sans','Noto Sans JP',sans-serif";
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const clamp01=v=>v<0?0:v>1?1:v;
+  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const charts=[];
+  function reg(id,W,H,draw,holdT){
+    const cv=document.getElementById(id),ctx=cv.getContext('2d');
+    cv.width=W*dpr;cv.height=H*dpr;cv.style.aspectRatio=W+'/'+H;
+    if(cv.classList.contains('fix')){cv.style.width=W+'px';cv.style.height=H+'px';}
+    ctx.scale(dpr,dpr);
+    const o={cv,ctx,W,H,draw,holdT:holdT||4000,start:null,inView:false};charts.push(o);
+    new IntersectionObserver(es=>es.forEach(e=>{o.inView=e.isIntersecting;if(e.isIntersecting&&o.start==null)o.start=performance.now();}),{threshold:.15}).observe(cv);
+    return o;
+  }
+  function glow(ctx,c,b){ctx.shadowColor=c;ctx.shadowBlur=b;}
+  function noglow(ctx){ctx.shadowBlur=0;ctx.shadowColor='transparent';}
+  function txt(ctx,s,x,y,c,size,align,font){ctx.fillStyle=c;ctx.font=size+'px '+(font||MONO);ctx.textAlign=align||'left';ctx.textBaseline='middle';ctx.fillText(s,x,y);}
+
+  /* ---------- 01 SCATTER radar ---------- */
+  const SC=[['宮崎市',28.3,12.09],['延岡',36.1,18.45],['日向',36.5,17.13],['高鍋',37.2,17.95],['日南',42.2,21.22],['小林',41.6,20.07],['中央',39.5,18.39],['高千穂',46.8,22.57]];
+  (function(){const xs=SC.map(d=>d[1]),ys=SC.map(d=>d[2]);const n=xs.length,mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;
+    let sxy=0,sxx=0;for(let i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)**2;}SC.slope=sxy/sxx;SC.inter=my-SC.slope*mx;})();
+  reg('c1',880,440,function(ctx,t){
+    const W=880,H=440,m={l:64,r:30,t:30,b:54},xmin=26,xmax=49,ymin=10,ymax=24,CYC=6200;
+    const px=v=>m.l+(v-xmin)/(xmax-xmin)*(W-m.l-m.r),py=v=>H-m.b-(v-ymin)/(ymax-ymin)*(H-m.t-m.b);
+    t=t%CYC;ctx.clearRect(0,0,W,H);
+    for(let gx=28;gx<=48;gx+=4){ctx.strokeStyle=C.grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px(gx),m.t);ctx.lineTo(px(gx),H-m.b);ctx.stroke();txt(ctx,gx+'%',px(gx),H-m.b+22,C.dim,11,'center');}
+    for(let gy=12;gy<=24;gy+=4){ctx.strokeStyle=C.grid;ctx.beginPath();ctx.moveTo(m.l,py(gy));ctx.lineTo(W-m.r,py(gy));ctx.stroke();txt(ctx,gy,m.l-10,py(gy),C.dim,11,'right');}
+    txt(ctx,'高齢化率 (%)',(m.l+W-m.r)/2,H-14,C.txt,12,'center');
+    ctx.save();ctx.translate(18,(m.t+H-m.b)/2);ctx.rotate(-Math.PI/2);txt(ctx,'粗死亡率 (‰)',0,0,C.txt,12,'center');ctx.restore();
+    const sweepEnd=2400,beamX=m.l+clamp01(t/sweepEnd)*(W-m.l-m.r);
+    if(t<sweepEnd+120){const g=ctx.createLinearGradient(beamX-34,0,beamX+8,0);g.addColorStop(0,'rgba(47,245,224,0)');g.addColorStop(.7,'rgba(47,245,224,.10)');g.addColorStop(1,'rgba(47,245,224,.55)');
+      ctx.fillStyle=g;ctx.fillRect(beamX-34,m.t,42,H-m.t-m.b);ctx.strokeStyle='rgba(47,245,224,.8)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(beamX,m.t);ctx.lineTo(beamX,H-m.b);ctx.stroke();}
+    const rt=clamp01((t-2500)/1300);
+    if(rt>0){const x1=xmin+1,x2=xmin+1+rt*(xmax-1-(xmin+1));ctx.strokeStyle=C.amb;ctx.lineWidth=1.6;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(px(x1),py(SC.slope*x1+SC.inter));ctx.lineTo(px(x2),py(SC.slope*x2+SC.inter));ctx.stroke();ctx.setLineDash([]);
+      glow(ctx,C.amb,10);ctx.fillStyle=C.amb;ctx.beginPath();ctx.arc(px(x2),py(SC.slope*x2+SC.inter),3.5,0,7);ctx.fill();noglow(ctx);}
+    SC.forEach(d=>{const cx=px(d[1]),cy=py(d[2]);const rv=t>=sweepEnd?1:clamp01((beamX-cx)/46+.0);if(rv<=0)return;
+      const col=d[0]==='延岡'?C.mag:C.cy;const pr=t>3900?(.5+.5*Math.sin((t-3900)/300)):1;
+      glow(ctx,col,12*rv);ctx.fillStyle=col;ctx.globalAlpha=.12*rv;ctx.beginPath();ctx.arc(cx,cy,13,0,7);ctx.fill();ctx.globalAlpha=1;
+      ctx.beginPath();ctx.arc(cx,cy,6*rv,0,7);ctx.fillStyle=C.void;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=col;ctx.stroke();noglow(ctx);
+      if(t>3900){ctx.strokeStyle=col;ctx.globalAlpha=.4*pr;ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,10+4*pr,0,7);ctx.stroke();ctx.globalAlpha=1;}
+      if(rv>.6)txt(ctx,d[0],cx,cy-16,d[0]==='延岡'?C.mag:C.txt,11,'center',MONO);});
+    if(rt>.9)txt(ctx,'r=0.975',px(xmax-1)-6,py(SC.slope*(xmax-1)+SC.inter)-12,C.amb,11,'right');
+  },4700);
+
+  /* ---------- 02 FOREST sonar ---------- */
+  const FR=[['延岡',1184.9,1131.8,1238.1],['高鍋',1144.1,1086.5,1201.7],['日南',1135.7,1069.7,1201.7],['中央',1120.2,1012.0,1228.3],['日向',1104.8,1044.5,1165.0],['高千穂',1053.3,939.4,1167.2],['宮崎市',995.8,967.3,1024.3]];
+  reg('c2',880,372,function(ctx,t){
+    const W=880,H=372,m={l:84,r:48,t:26,b:46},lo=900,hi=1280,CYC=5400;
+    const px=v=>m.l+(v-lo)/(hi-lo)*(W-m.l-m.r);t=t%CYC;ctx.clearRect(0,0,W,H);
+    for(let g=900;g<=1280;g+=100){ctx.strokeStyle=C.gridS;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px(g),m.t);ctx.lineTo(px(g),H-m.b);ctx.stroke();txt(ctx,g,px(g),H-m.b+20,C.dim,11,'center');}
+    txt(ctx,'年齢調整死亡率 (10万対)',(m.l+W-m.r)/2,H-10,C.txt,11.5,'center');
+    const n=FR.length,yi=(H-m.t-m.b)/n;
+    FR.forEach((d,i)=>{const y=m.t+yi*i+yi/2,ap=ease(clamp01((t-i*230)/620));if(ap<=0)return;
+      const col=i===0?C.mag:i===n-1?C.cy:C.vio;
+      const loX=px(d[1])+(px(d[2])-px(d[1]))*ap,hiX=px(d[1])+(px(d[3])-px(d[1]))*ap;
+      ctx.strokeStyle=col;ctx.globalAlpha=.7;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(loX,y);ctx.lineTo(hiX,y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(loX,y-5);ctx.lineTo(loX,y+5);ctx.moveTo(hiX,y-5);ctx.lineTo(hiX,y+5);ctx.stroke();ctx.globalAlpha=1;
+      const ring=t-i*230;if(ring>0&&ring<760){const rr=ring/760;ctx.strokeStyle=col;ctx.globalAlpha=(1-rr)*.8;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px(d[1]),y,rr*42,0,7);ctx.stroke();ctx.globalAlpha=1;}
+      glow(ctx,col,10*ap);ctx.fillStyle=col;ctx.beginPath();ctx.arc(px(d[1]),y,6*ap,0,7);ctx.fill();noglow(ctx);
+      txt(ctx,d[0],m.l-12,y,i===0?C.mag:i===n-1?C.cy:C.txt,12.5,'right',SANS);
+      if(ap>.7)txt(ctx,d[1].toFixed(0),hiX+10,y,C.dim,11,'left');});
+  },3200);
+
+  /* ---------- 03 NATURAL cascade ---------- */
+  const NT=[['高千穂',-18.11,46.8],['日南',-16.84,42.2],['小林',-14.62,41.6],['中央',-13.50,39.5],['高鍋',-12.79,37.2],['延岡',-12.26,36.1],['日向',-10.56,36.5],['宮崎市',-5.25,28.3]];
+  reg('c3',880,392,function(ctx,t){
+    const W=880,H=392,m={l:78,r:96,t:22,b:30},CYC=5200,maxA=20;t=t%CYC;ctx.clearRect(0,0,W,H);
+    const n=NT.length,yi=(H-m.t-m.b)/n,trackW=W-m.l-m.r,xR=W-m.r;
+    txt(ctx,'自然増減率 (‰) — 全圏域が負',m.l,m.t-6,C.dim,11,'left');
+    for(let i=0;i<=n;i++){const y=m.t+yi*i;ctx.strokeStyle=C.gridS;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(m.l,y);ctx.lineTo(xR,y);ctx.stroke();}
+    NT.forEach((d,i)=>{const y=m.t+yi*i+yi/2,gw=ease(clamp01((t-i*210)/740));if(gw<=0){txt(ctx,d[0],m.l-12,y,C.dim,12.5,'right',SANS);return;}
+      const w=Math.abs(d[1])/maxA*trackW*gw,x0=xR-w;
+      const g=ctx.createLinearGradient(x0,0,xR,0);g.addColorStop(0,'#7a1240');g.addColorStop(1,C.mag);
+      ctx.fillStyle=g;ctx.fillRect(x0,y-9,w,18);
+      glow(ctx,C.mag,12*gw);ctx.fillStyle=C.mag;ctx.fillRect(x0-1.5,y-10,3,20);noglow(ctx);
+      txt(ctx,d[0],m.l-12,y,C.txt,12.5,'right',SANS);
+      if(gw>.75){txt(ctx,d[1].toFixed(2)+'‰',xR+10,y-5,C.mag,12,'left');txt(ctx,d[2]+'%',xR+10,y+9,C.dim,10,'left',SANS);}});
+  },3200);
+
+  /* ---------- 04 DONUT sweep ---------- */
+  const DN=[['脳梗塞',57.9,C.cy],['脳内出血',28.2,C.vio],['くも膜下',10.2,C.mag],['その他',3.7,'#33425f']];
+  reg('c4',360,300,function(ctx,t){
+    const W=360,H=300,cx=W/2,cy=150,r=88,sw=30,CYC=4600;t=t%CYC;ctx.clearRect(0,0,W,H);
+    const prog=ease(clamp01(t/2600));let acc=-Math.PI/2,cum=0;
+    DN.forEach(d=>{const frac=d[1]/100,full=frac*Math.PI*2;const sliceProg=clamp01((prog-cum)/Math.max(frac,.0001));const ang=full*sliceProg;if(ang<=0){cum+=frac;return;}
+      ctx.strokeStyle=d[2];ctx.lineWidth=sw;glow(ctx,d[2],10);ctx.beginPath();ctx.arc(cx,cy,r,acc,acc+ang);ctx.stroke();noglow(ctx);
+      acc+=full;cum+=frac;});
+    txt(ctx,'451',cx,cy-6,C.bright,26,'center');txt(ctx,'件 / 3年',cx,cy+16,C.dim,11,'center');
+    if(prog>.92){let a2=-Math.PI/2;DN.forEach(d=>{const mid=a2+d[1]/100*Math.PI;const lx=cx+(r+26)*Math.cos(mid),ly=cy+(r+26)*Math.sin(mid);
+      txt(ctx,d[1]+'%',lx,ly,d[2]==='#33425f'?C.dim:d[2],11,'center');a2+=d[1]/100*Math.PI*2;});}
+  },3400);
+
+  /* ---------- master loop ---------- */
+  function loop(now){charts.forEach(o=>{if(o.inView&&o.start!=null){let e=now-o.start;if(reduce)e=99999;o.draw(o.ctx,Math.max(0,e));}});requestAnimationFrame(loop);}
+  if(reduce){charts.forEach(o=>{o.draw(o.ctx,o.holdT);});}
+  else requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

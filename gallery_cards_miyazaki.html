@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KRworks ギャラリーカード — 宮崎9圏域</title>
+<style>
+/* ===== preview page bg (krworks風グリッド) — 貼り付け時は不要 ===== */
+body{margin:0;background:#070b14;color:#cdd7ea;font-family:system-ui,'Hiragino Sans','Noto Sans JP',sans-serif;
+  background-image:repeating-linear-gradient(0deg,transparent 0 39px,rgba(30,52,86,.20) 39px 40px),
+    repeating-linear-gradient(90deg,transparent 0 39px,rgba(30,52,86,.20) 39px 40px);}
+.pwrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+.pnote{font-family:ui-monospace,monospace;font-size:12px;color:#6d7ca2;letter-spacing:.05em;margin-bottom:24px;line-height:1.8}
+.pnote b{color:#2ff5e0}
+.kr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:26px}
+
+/* ============================================================
+   ↓↓↓ ここから下＝ギャラリーに貼り付ける部分（.kr-* のCSS + カードHTML）
+   ============================================================ */
+.kr-card{display:flex;flex-direction:column;text-decoration:none;border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,#0d1626,#0a111f);border:1px solid #1c2c49;
+  box-shadow:0 8px 30px rgba(0,0,0,.35);transition:transform .18s,box-shadow .18s,border-color .18s}
+.kr-card:hover{transform:translateY(-4px);border-color:#2ff5e0;box-shadow:0 0 0 1px rgba(47,245,224,.4),0 14px 40px rgba(0,0,0,.5)}
+.kr-hero{position:relative;height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:radial-gradient(120% 100% at 50% 0%,#16233d,#0c1424 70%)}
+.kr-hero::before{content:"";position:absolute;inset:0;opacity:.5;
+  background-image:radial-gradient(rgba(47,245,224,.35) 1px,transparent 1.4px);background-size:18px 18px;
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 30%,#000,transparent 75%);mask-image:radial-gradient(120% 90% at 50% 30%,#000,transparent 75%)}
+.kr-hero-title{position:relative;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:800;font-size:60px;letter-spacing:.02em;
+  background:linear-gradient(135deg,#2ff5e0,#7bb8ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(47,245,224,.4))}
+.kr-hero-title.mag{background:linear-gradient(135deg,#2ff5e0,#ff2e88)}
+.kr-body{padding:20px 22px 18px;display:flex;flex-direction:column;flex:1}
+.kr-eyebrow{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#2ff5e0;margin-bottom:10px}
+.kr-title{font-size:20px;font-weight:700;color:#eef4ff;margin:0 0 9px}
+.kr-desc{font-size:13.5px;line-height:1.65;color:#94a3be;margin:0 0 16px;flex:1}
+.kr-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kr-tag{font-family:ui-monospace,monospace;font-size:11px;color:#9fb2cf;border:1px solid #2a3c5c;border-radius:5px;padding:5px 11px}
+.kr-tag.cy{color:#2ff5e0;border-color:rgba(47,245,224,.4)}
+.kr-open{margin-left:auto;font-family:ui-monospace,monospace;font-size:13px;color:#2ff5e0;letter-spacing:.04em;white-space:nowrap}
+.kr-card:hover .kr-open{text-shadow:0 0 10px rgba(47,245,224,.5)}
+</style>
+</head>
+<body>
+<div class="pwrap">
+  <div class="pnote">
+    プレビュー。<b>&lt;style&gt; の .kr-* 部分</b>と<b>下のカード &lt;a&gt;</b>をギャラリーに貼ればOK。<br>
+    既存サイトに同等のカードCSSがあるなら、class名をそちらに合わせて &lt;a&gt; 内のテキスト/リンクだけ流用しても可。<br>
+    リンク先はASCII名（web/ 内のファイル）。リポジトリ直下に置くなら相対パスを調整。
+  </div>
+
+  <div class="kr-grid">
+
+    <!-- ===== CARD 1: 死亡分析（2D+3D） ===== -->
+    <a class="kr-card" href="miyazaki_mortality_2d3d.html">
+      <div class="kr-hero"><span class="kr-hero-title mag">宮崎</span></div>
+      <div class="kr-body">
+        <div class="kr-eyebrow">PUBLIC HEALTH · 地域分析</div>
+        <h3 class="kr-title">宮崎9圏域 死亡分析</h3>
+        <p class="kr-desc">9つの二次医療圏の死亡格差を年齢構造から分解。粗死亡率・年齢調整死亡率・自然増減・医療資源を可視化し、「3D」ボタンで県地図上に立体表示・低空フライトも。公的統計のみ。</p>
+        <div class="kr-foot">
+          <span class="kr-tag cy">3D</span><span class="kr-tag">公的統計</span>
+          <span class="kr-open">開く ▶</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- ===== CARD 2: アニメ集 ===== -->
+    <a class="kr-card" href="miyazaki_anime_demo.html">
+      <div class="kr-hero"><span class="kr-hero-title">9圏域</span></div>
+      <div class="kr-body">
+        <div class="kr-eyebrow">PUBLIC HEALTH · アニメ</div>
+        <h3 class="kr-title">死亡分析 アニメ集</h3>
+        <p class="kr-desc">散布のレーダー走査、順位逆転モーフ、信頼区間のソナー展開、自然減の波及、病型ドーナツの掃引。スクロールで各グラフが起動するサイバーパンク調アニメ。</p>
+        <div class="kr-foot">
+          <span class="kr-tag cy">アニメ</span><span class="kr-tag">公的統計</span>
+          <span class="kr-open">開く ▶</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- ===== CARD 3 (任意): 業務概要 単一出典版 ===== -->
+    <a class="kr-card" href="miyazaki_vital_demo.html">
+      <div class="kr-hero"><span class="kr-hero-title">人口</span></div>
+      <div class="kr-body">
+        <div class="kr-eyebrow">PUBLIC HEALTH · 単一出典</div>
+        <h3 class="kr-title">人口動態 単一出典版</h3>
+        <p class="kr-desc">『保健所業務概要 令和7年度版』だけを出典に、出生・死亡・自然増減・医師数を可視化。全圏域が人口自然減。外部基準を要する年齢調整は非掲載。</p>
+        <div class="kr-foot">
+          <span class="kr-tag cy">単一出典</span><span class="kr-tag">公的統計</span>
+          <span class="kr-open">開く ▶</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</div>
+</body>
+</html>
