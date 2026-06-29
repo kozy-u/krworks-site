@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThorRadar ｜ 雷雲リスク見守りの研究開発コンセプト</title>
+<!-- フォントは共有スタイルシートで自己ホスト（第三者通信ゼロ） -->
+<link rel="stylesheet" href="krw-fonts.css">
+<style>
+  :root{
+    --bg:#070A14;
+    --bg-2:#0A0E1C;
+    --surface:#0E1426;
+    --surface-2:#121A30;
+    --ink:#E9EDFB;
+    --ink-soft:#99A6CC;
+    --muted:#5C6890;
+    --line:#1E2A49;
+    --line-soft:#17203A;
+    --grid:rgba(120,142,200,.20);
+
+    --cyan:#28E2E8;
+    --amber:#FFCE3A;
+    --magenta:#FF2E97;
+
+    --calm:var(--cyan);
+    --caution:var(--amber);
+    --critical:var(--magenta);
+    --calm-bg:rgba(40,226,232,.09);
+    --caution-bg:rgba(255,206,58,.10);
+    --critical-bg:rgba(255,46,151,.10);
+
+    --glow-cyan:0 0 18px rgba(40,226,232,.45);
+    --glow-amber:0 0 18px rgba(255,206,58,.40);
+    --glow-magenta:0 0 18px rgba(255,46,151,.45);
+
+    --font-display:'Orbitron','M PLUS 1','Hiragino Kaku Gothic ProN',sans-serif;
+    --font-body:'M PLUS 1','Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,sans-serif;
+    --font-mono:'Share Tech Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    font-weight:300;
+    color:var(--ink);
+    background:
+      radial-gradient(900px 420px at 86% -6%, rgba(40,226,232,.12), transparent 60%),
+      radial-gradient(760px 420px at 2% 8%, rgba(255,46,151,.09), transparent 60%),
+      var(--bg);
+    line-height:1.78;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--cyan);}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- top safety strip (must stay legible) ---------- */
+  .safetystrip{
+    background:#05070E;
+    color:#EDF1FF;
+    font-size:.82rem;
+    letter-spacing:.02em;
+    border-top:1px solid rgba(255,206,58,.55);
+    border-bottom:1px solid rgba(255,206,58,.55);
+    box-shadow:inset 0 0 24px rgba(255,206,58,.06);
+  }
+  .safetystrip .wrap{padding-top:11px;padding-bottom:11px;display:flex;gap:12px;align-items:flex-start;}
+  .safetystrip .tag{
+    font-family:var(--font-mono);
+    font-size:.66rem;font-weight:500;letter-spacing:.16em;
+    color:var(--amber);
+    background:rgba(255,206,58,.08);
+    border:1px solid rgba(255,206,58,.5);
+    border-radius:4px;padding:3px 8px;white-space:nowrap;margin-top:1px;
+    text-shadow:var(--glow-amber);
+  }
+  .safetystrip p{margin:0;opacity:.95;font-weight:300;}
+  .safetystrip strong{color:#fff;font-weight:500;}
+
+  /* ---------- hero ---------- */
+  header.hero{
+    padding:64px 0 40px;position:relative;overflow:hidden;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:46px 46px;
+    background-position:center top;
+  }
+  header.hero::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 40%,var(--bg) 96%);
+  }
+  header.hero .wrap{position:relative;z-index:1;}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:.74rem;font-weight:500;letter-spacing:.26em;
+    color:var(--cyan);text-transform:uppercase;margin:0 0 18px;
+    text-shadow:0 0 14px rgba(40,226,232,.4);
+  }
+  .wordmark{
+    font-family:var(--font-display);font-weight:700;
+    font-size:clamp(2.5rem,7vw,4.5rem);line-height:1;letter-spacing:.01em;margin:0 0 8px;
+  }
+  .wordmark b{color:var(--cyan);font-weight:700;text-shadow:var(--glow-cyan);}
+  .wordmark span.rad{color:#fff;}
+  .wordmark .bolt{color:var(--amber);text-shadow:var(--glow-amber);}
+  .sub{font-size:clamp(1.05rem,2.2vw,1.3rem);font-weight:400;color:var(--ink);margin:0 0 22px;}
+  .lede{max-width:680px;font-size:1.05rem;font-weight:300;color:var(--ink-soft);margin:0;}
+  .lede strong{color:var(--ink);font-weight:500;}
+
+  /* ---------- concept notice ---------- */
+  .notice{
+    margin:34px 0 0;background:var(--surface);
+    border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:10px;padding:20px 22px;box-shadow:0 0 0 1px rgba(255,206,58,.06),0 0 22px rgba(255,206,58,.05);
+  }
+  .notice h2{
+    font-family:var(--font-mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--amber);margin:0 0 10px;font-weight:500;
+  }
+  .notice ul{margin:0;padding-left:1.1em;}
+  .notice li{margin:6px 0;color:var(--ink);font-weight:300;}
+  .notice strong{color:var(--amber);font-weight:500;}
+
+  /* ---------- sections ---------- */
+  section{padding:54px 0;border-top:1px solid var(--line-soft);}
+  .sec-num{
+    font-family:var(--font-mono);font-size:.74rem;font-weight:500;letter-spacing:.16em;
+    color:var(--cyan);display:block;margin-bottom:8px;opacity:.85;
+  }
+  h3.sec-title{
+    font-weight:600;font-size:clamp(1.5rem,3.4vw,2.05rem);letter-spacing:.01em;
+    margin:0 0 14px;line-height:1.2;color:#fff;
+    padding-left:14px;border-left:3px solid var(--cyan);
+    box-shadow:-3px 0 14px -6px rgba(40,226,232,.6);
+  }
+  .sec-intro{max-width:680px;color:var(--ink-soft);margin:0 0 30px;font-weight:300;}
+
+  /* ---------- inputs ---------- */
+  .axes{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .axis{
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:22px 20px;display:flex;flex-direction:column;transition:border-color .2s,box-shadow .2s;
+  }
+  .axis:hover{border-color:rgba(40,226,232,.5);box-shadow:0 0 24px rgba(40,226,232,.10);}
+  .axis .ico{color:var(--cyan);line-height:0;margin-bottom:14px;}
+  .axis .ico svg{width:26px;height:26px;display:block;filter:drop-shadow(0 0 6px rgba(40,226,232,.45));}
+  .axis h4{margin:0 0 4px;font-size:1.08rem;font-weight:500;color:#fff;}
+  .axis .role{font-family:var(--font-mono);font-size:.68rem;font-weight:400;letter-spacing:.08em;color:var(--cyan);margin:0 0 12px;text-transform:uppercase;}
+  .axis p{margin:0;font-size:.92rem;color:var(--ink-soft);font-weight:300;}
+  .axis .flag{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:.82rem;color:var(--ink-soft);}
+  .axis .flag b{color:var(--amber);font-weight:500;}
+
+  /* ---------- state model ---------- */
+  .states{display:grid;grid-template-columns:repeat(3,1fr);gap:0;align-items:stretch;}
+  .state{background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;position:relative;}
+  .states .state:nth-child(1){border-radius:12px 0 0 12px;}
+  .states .state:nth-child(3){border-radius:0 12px 12px 0;}
+  .states .state:not(:first-child){border-left:none;}
+  .state .chip{
+    font-family:var(--font-mono);font-weight:500;font-size:.78rem;letter-spacing:.06em;
+    padding:11px 16px;color:#05070E;display:flex;align-items:center;gap:9px;
+  }
+  .state.s1 .chip{background:var(--cyan);box-shadow:var(--glow-cyan);}
+  .state.s2 .chip{background:var(--amber);box-shadow:var(--glow-amber);}
+  .state.s3 .chip{background:var(--magenta);color:#fff;box-shadow:var(--glow-magenta);}
+  .state .chip .dot{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.85;}
+  .state .body{padding:18px 16px;display:flex;flex-direction:column;gap:12px;flex:1;}
+  .state .label{font-weight:500;font-size:1.02rem;margin:0;color:#fff;}
+  .state ul{margin:0;padding-left:1.05em;font-size:.88rem;color:var(--ink-soft);font-weight:300;}
+  .state ul li{margin:4px 0;}
+  .state .act{margin-top:auto;font-size:.82rem;border-radius:7px;padding:10px 12px;line-height:1.5;border:1px solid transparent;font-weight:300;}
+  .state.s1 .act{background:var(--calm-bg);color:var(--cyan);border-color:rgba(40,226,232,.28);}
+  .state.s2 .act{background:var(--caution-bg);color:var(--amber);border-color:rgba(255,206,58,.28);}
+  .state.s3 .act{background:var(--critical-bg);color:#FF7DBE;border-color:rgba(255,46,151,.3);}
+  .state .act b{font-weight:600;}
+  .flow-note{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin:14px 0 0;letter-spacing:.04em;}
+
+  /* ---------- signature ---------- */
+  .signature{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 26px 20px;box-shadow:0 0 30px rgba(40,226,232,.06);}
+  .signature .cap{font-family:var(--font-mono);font-size:.72rem;font-weight:500;letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;margin:0 0 18px;}
+  .ftb{width:100%;height:auto;display:block;}
+  .readout{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:18px;font-family:var(--font-mono);font-size:.9rem;}
+  .readout .k{color:var(--muted);font-size:.74rem;letter-spacing:.06em;display:block;font-weight:400;}
+  .readout .v{color:#fff;font-weight:500;font-size:1.15rem;}
+  .readout .v small{font-size:.7rem;color:var(--ink-soft);font-weight:400;}
+  .caveat{margin:18px 0 0;padding:14px 16px;border-radius:8px;background:rgba(255,46,151,.08);border:1px solid rgba(255,46,151,.4);font-size:.9rem;color:#FFC2DF;font-weight:300;}
+  .caveat b{font-weight:600;color:#fff;}
+
+  /* ---------- flash-to-bang animation ---------- */
+  .ftb .fill{transform-box:fill-box;transform-origin:left center;transform:scaleX(1);}
+  .ftb .ripple{transform-box:fill-box;transform-origin:center;opacity:0;}
+  .ftb .flashglow{transform-box:fill-box;transform-origin:center;opacity:0;}
+  .ftb .t1grp{opacity:1;}
+  @keyframes ftbFill{
+    0%,6%{transform:scaleX(0);opacity:.16;}
+    50%{transform:scaleX(1);opacity:.16;}
+    86%{transform:scaleX(1);opacity:.16;}
+    94%{transform:scaleX(1);opacity:0;}
+    100%{transform:scaleX(0);opacity:0;}
+  }
+  @keyframes ftbFlashLine{0%{opacity:.8;}3%{opacity:1;}10%{opacity:1;}16%{opacity:.85;}100%{opacity:.85;}}
+  @keyframes ftbFlashGlow{0%,1%{transform:scale(.3);opacity:0;}3%{transform:scale(.4);opacity:.95;}11%{transform:scale(1.9);opacity:0;}100%{transform:scale(1.9);opacity:0;}}
+  @keyframes ftbRippleA{0%,5%{transform:scale(.4);opacity:0;}8%{opacity:.5;}30%{transform:scale(6);opacity:0;}100%{transform:scale(6);opacity:0;}}
+  @keyframes ftbRippleB{0%,18%{transform:scale(.4);opacity:0;}21%{opacity:.45;}44%{transform:scale(6.5);opacity:0;}100%{transform:scale(6.5);opacity:0;}}
+  @keyframes ftbArrive{0%,48%{opacity:.4;}53%{opacity:1;}86%{opacity:1;}93%{opacity:.4;}100%{opacity:.4;}}
+  @keyframes ftbArrivePulse{0%,48%{filter:none;}53%{filter:drop-shadow(0 0 9px rgba(40,226,232,.95));}68%{filter:drop-shadow(0 0 3px rgba(40,226,232,.4));}86%{filter:none;}100%{filter:none;}}
+  @keyframes ftbReadoutGlow{0%,48%{text-shadow:none;}54%{text-shadow:0 0 14px rgba(40,226,232,.9);}80%{text-shadow:0 0 4px rgba(40,226,232,.25);}100%{text-shadow:none;}}
+  @media (prefers-reduced-motion:no-preference){
+    .ftb .fill{animation:ftbFill 6s cubic-bezier(.45,0,.2,1) infinite;}
+    .ftb .rippleA{animation:ftbRippleA 6s ease-out infinite;}
+    .ftb .rippleB{animation:ftbRippleB 6s ease-out infinite;}
+    .ftb .flashglow{animation:ftbFlashGlow 6s ease-out infinite;}
+    .ftb .flash{animation:ftbFlashLine 6s ease-in-out infinite;}
+    .ftb .t1grp{animation:ftbArrive 6s ease-in-out infinite;}
+    .ftb .t1{animation:ftbArrivePulse 6s ease-in-out infinite;}
+    .readout .exval{animation:ftbReadoutGlow 6s ease-in-out infinite;}
+  }
+
+  /* ---------- scenarios ---------- */
+  .scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .scene{border:1px solid var(--line);border-radius:11px;padding:20px;background:var(--surface);}
+  .scene .ico{color:var(--ink-soft);line-height:0;margin-bottom:12px;}
+  .scene .ico svg{width:24px;height:24px;display:block;}
+  .scene h4{margin:0 0 6px;font-size:1.02rem;font-weight:500;color:#fff;}
+  .scene p{margin:0;font-size:.88rem;color:var(--ink-soft);font-weight:300;}
+
+  /* ---------- direction ---------- */
+  .direction{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 4px;}
+  .direction .row{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line-soft);}
+  .direction .row:last-child{border-bottom:none;}
+  .direction .name{font-weight:500;color:#fff;}
+  .direction .desc{font-size:.86rem;color:var(--ink-soft);font-weight:300;}
+  .direction .price{font-family:var(--font-mono);font-weight:500;color:var(--amber);white-space:nowrap;font-size:.9rem;letter-spacing:.04em;}
+  .unconfirmed{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin:14px 0 0;letter-spacing:.03em;}
+
+  /* ---------- footer ---------- */
+  footer{background:#05070E;color:#AEB9D6;padding:40px 0 30px;margin-top:20px;border-top:1px solid rgba(40,226,232,.3);}
+  footer .co{font-family:var(--font-display);font-weight:600;color:#fff;font-size:1.1rem;margin:0 0 8px;letter-spacing:.04em;text-shadow:0 0 16px rgba(40,226,232,.3);}
+  footer .safe{border-top:1px solid rgba(255,255,255,.1);margin-top:18px;padding-top:16px;font-size:.8rem;opacity:.85;max-width:760px;font-weight:300;}
+  footer .meta{font-family:var(--font-mono);font-size:.7rem;opacity:.55;margin-top:14px;letter-spacing:.04em;color:var(--cyan);}
+
+  /* ---------- site-standard HOME button ---------- */
+  #krw-home-fab{position:fixed;top:14px;right:16px;z-index:200;font-family:'Orbitron','Noto Sans JP',sans-serif;font-weight:600;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:#07080c;background:linear-gradient(90deg,#00f0ff,#2463ff);text-decoration:none;padding:11px 22px;border-radius:9px;box-shadow:0 0 26px -3px rgba(0,240,255,.6);display:inline-flex;align-items:center;gap:8px;transition:transform .15s,box-shadow .15s;animation:krwHomePulse 2.4s ease-in-out infinite;}
+  #krw-home-fab:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px -2px rgba(0,240,255,.85);}
+  @keyframes krwHomePulse{0%,100%{box-shadow:0 0 22px -4px rgba(0,240,255,.5);}50%{box-shadow:0 0 34px -2px rgba(0,240,255,.8);}}
+  @media (prefers-reduced-motion:reduce){#krw-home-fab{animation:none;}}
+
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:3px;box-shadow:0 0 12px rgba(40,226,232,.5);}
+
+  @media (max-width:760px){
+    .axes,.states,.scenes{grid-template-columns:1fr;}
+    .states .state{border-radius:12px!important;border-left:1px solid var(--line)!important;}
+    .states .state:not(:first-child){margin-top:-1px;}
+    .direction .row{grid-template-columns:1fr;gap:6px;}
+    .direction .price{justify-self:start;}
+    .safetystrip .wrap{flex-direction:column;gap:8px;}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .sweep{transform:translateX(-120px);opacity:0;animation:sweepin 1.1s .25s cubic-bezier(.2,.7,.2,1) forwards;}
+    @keyframes sweepin{to{transform:translateX(0);opacity:1;}}
+    .wordmark .bolt{animation:flicker 4.5s steps(1) infinite;}
+    @keyframes flicker{0%,93%,100%{opacity:1;}94%{opacity:.35;}95%{opacity:1;}96%{opacity:.5;}97%{opacity:1;}}
+  }
+</style>
+</head>
+<body>
+
+  <div class="safetystrip">
+    <div class="wrap">
+      <span class="tag">R&amp;D CONCEPT</span>
+      <p>これは<strong>研究開発段階のコンセプト</strong>です。提供中の製品ではなく、安全を保証するものでもありません。落雷時に安全な場所は<strong>頑丈な建物の中か車内のみ</strong>。気象庁などの公式情報・警報に必ず従ってください。</p>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">KRworks ｜ Atmospheric Sensing R&amp;D</p>
+      <h1 class="wordmark"><b>THOR</b><span class="rad">RADAR</span> <span class="bolt"><svg viewBox="0 0 24 24" width="0.82em" height="0.82em" aria-hidden="true" style="filter:drop-shadow(0 0 10px rgba(255,206,58,.55));vertical-align:-0.02em"><path d="M13 2 5 14h5l-1 8 9-12h-6z" fill="currentColor"/></svg></span></h1>
+      <p class="sub">スマホのセンサーと公的気象データで、雷雲リスクを"見える化"できるか</p>
+      <p class="lede">専用機材を使わず、手元のスマートフォンと公的機関の雷ナウキャストだけで、屋外活動中の落雷リスクを本人に分かりやすく示せないか。<strong>その実現可能性を検証している研究開発コンセプト</strong>です。下記は現時点の構想をまとめたものです。</p>
+
+      <div class="notice">
+        <h2>このページの位置づけ</h2>
+        <ul>
+          <li>記載の機能は<strong>構想・検証中</strong>であり、動作・精度を保証するものではありません。</li>
+          <li>落雷から身を守れるのは、頑丈な建物の中か金属屋根のある車内だけです。木の下・テント・あずまや等は危険です。</li>
+          <li>本コンセプトは公的な気象情報・警報に代わるものではなく、それらに必ず従うことを前提としています。</li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <section>
+      <div class="wrap">
+        <span class="sec-num">01 — INPUTS</span>
+        <h3 class="sec-title">検証している3つの入力</h3>
+        <p class="sec-intro">音・光・公的データの3つを手がかりに、落雷リスクの近さを推定できないかを調べています。いずれも現時点では「使えるか確認中」の段階で、それぞれに技術的な制約があります。</p>
+        <div class="axes">
+          <div class="axis">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6M8 5v14M12 3v18M16 6v12M20 8v8"/></svg></div>
+            <h4>音（マイク）</h4>
+            <p class="role">acoustic</p>
+            <p>環境音から雷鳴らしき成分を抽出できるかを検証中。遠雷は低周波、近い雷は高周波の鋭い音を含みます。</p>
+            <p class="flag"><b>制約：</b>スマホのマイクと音声処理は低周波を削る傾向があり、遠雷成分が残るかは機種依存で未確認。</p>
+          </div>
+          <div class="axis">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg></div>
+            <h4>光（カメラ）</h4>
+            <p class="role">optical</p>
+            <p>稲妻による一瞬の明るさの変化を捉える想定。Androidは光センサーを利用でき、iOSはカメラ映像で代替します。</p>
+            <p class="flag"><b>制約：</b>iOSは環境光センサーをアプリに開放していません。日中は明るさの差が出にくく判別が難しい。</p>
+          </div>
+          <div class="axis">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="18" r="1.4" fill="currentColor" stroke="none"/><path d="M6 13a5 5 0 0 1 5 5M6 8.5a9.5 9.5 0 0 1 9.5 9.5M6 4a14 14 0 0 1 14 14"/></svg></div>
+            <h4>公的気象データ</h4>
+            <p class="role">nowcast</p>
+            <p>公的機関が出す雷活動度（ナウキャスト）を現在地で取得し、最も早い手がかりとして使う想定です。</p>
+            <p class="flag"><b>制約：</b>緯度経度で直接取れる公式の無料APIは無く、地図タイルの解析または商用APIの利用が必要。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <span class="sec-num">02 — STATE MODEL（構想）</span>
+        <h3 class="sec-title">状態の目安と遷移</h3>
+        <p class="sec-intro">入力をもとに、画面の状態を「平常 → 注意 → 危険」と切り替える構想です。下の条件はあくまで設計上の目安で、実機での妥当性はこれから検証します。</p>
+        <div class="states">
+          <div class="state s1">
+            <div class="chip"><span class="dot"></span>ｓ1 ｜ 平常</div>
+            <div class="body">
+              <p class="label">見守り</p>
+              <ul>
+                <li>付近に雷雲・強い降水帯が見られない</li>
+                <li>遠雷らしき音を検知していない</li>
+              </ul>
+              <div class="act"><b>表示：</b>グリーン相当。低頻度で公的データを確認。</div>
+            </div>
+          </div>
+          <div class="state s2">
+            <div class="chip"><span class="dot"></span>ｓ2 ｜ 注意</div>
+            <div class="body">
+              <p class="label">予兆を確認</p>
+              <ul>
+                <li>10〜15km圏に雷雲の兆候</li>
+                <li>または遠雷らしき低周波を検知</li>
+              </ul>
+              <div class="act"><b>表示：</b>イエロー。空模様への注意を通知し、光の確認を開始。</div>
+            </div>
+          </div>
+          <div class="state s3">
+            <div class="chip"><span class="dot"></span>ｓ3 ｜ 危険</div>
+            <div class="body">
+              <p class="label">直ちに退避</p>
+              <ul>
+                <li>光と音の差が短い（近接）</li>
+                <li>至近の雷鳴らしき音を検知</li>
+              </ul>
+              <div class="act"><b>表示：</b>レッドと振動で退避を案内。<b>大音量アラートは初期設定オフ・任意でオン。</b></div>
+            </div>
+          </div>
+        </div>
+        <p class="flow-note">// 条件・しきい値はすべて検証前の暫定値です。</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <span class="sec-num">03 — PHYSICS</span>
+        <h3 class="sec-title">光と音の時間差から距離を概算する</h3>
+        <p class="sec-intro">稲妻の光が見えてから雷鳴が届くまでの時間差に音速をかけると、雷雲までのおおよその距離が分かります。これは古くから知られた一般的な物理で、本コンセプトの近接判定の土台です。</p>
+
+        <div class="signature">
+          <p class="cap">flash-to-bang timing</p>
+          <svg class="ftb" viewBox="0 0 720 210" role="img" aria-label="光を検知した瞬間から雷鳴が届くまでの時間差と距離の関係を示す計器図。光は瞬時に、音は遅れて届き、その差が距離になる様子を繰り返し示します。">
+            <defs>
+              <linearGradient id="ftbWave" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#28E2E8" stop-opacity="0.05"/>
+                <stop offset="0.82" stop-color="#28E2E8" stop-opacity="0.12"/>
+                <stop offset="1" stop-color="#28E2E8" stop-opacity="0.6"/>
+              </linearGradient>
+            </defs>
+            <line x1="60" y1="150" x2="690" y2="150" stroke="var(--grid)" stroke-width="1.5"/>
+            <g font-family="var(--font-mono)" font-size="11" fill="var(--ink-soft)">
+              <line x1="60"  y1="60" x2="60"  y2="156" stroke="var(--grid)"/>
+              <text x="60"  y="174" text-anchor="middle">0s</text>
+              <line x1="270" y1="120" x2="270" y2="156" stroke="var(--grid)"/>
+              <text x="270" y="174" text-anchor="middle">5s · 1.7km</text>
+              <line x1="480" y1="120" x2="480" y2="156" stroke="var(--grid)"/>
+              <text x="480" y="174" text-anchor="middle">10s · 3.4km</text>
+              <line x1="660" y1="120" x2="660" y2="156" stroke="var(--grid)"/>
+              <text x="660" y="174" text-anchor="middle">15s · 5.1km</text>
+            </g>
+            <!-- 音が遅延を渡りきる様子（波面） -->
+            <rect class="fill" x="60" y="92" width="318" height="58" fill="url(#ftbWave)"/>
+            <!-- 発光から広がる音波 -->
+            <circle class="ripple rippleA" cx="60" cy="121" r="7" fill="none" stroke="#28E2E8" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            <circle class="ripple rippleB" cx="60" cy="121" r="7" fill="none" stroke="#28E2E8" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            <!-- 発光 t0 -->
+            <circle class="flashglow" cx="60" cy="97" r="9" fill="#FFCE3A"/>
+            <line class="flash" x1="60" y1="44" x2="60" y2="150" stroke="var(--amber)" stroke-width="2.5"/>
+            <text x="60" y="34" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--amber)">光 t0</text>
+            <!-- 到達 t1 -->
+            <g class="t1grp">
+              <line class="t1" x1="378" y1="44" x2="378" y2="150" stroke="var(--cyan)" stroke-width="2.5"/>
+              <text x="378" y="34" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="500" fill="var(--cyan)">音 t1</text>
+            </g>
+            <text x="219" y="86" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">Δt ≈ 9s</text>
+          </svg>
+
+          <div class="readout">
+            <div>
+              <span class="k">FORMULA</span>
+              <span class="v">距離 ≈ 340<small> m/s</small> × Δt</span>
+            </div>
+            <div>
+              <span class="k">EXAMPLE（Δt = 9s）</span>
+              <span class="v exval">≈ 3.1<small> km</small></span>
+            </div>
+          </div>
+
+          <p class="caveat"><b>重要：</b>この信号が出る時点で、雷雲はすでに数km圏内にいます。つまりこれは<b>早期警報ではなく「近接の確認」</b>です。より早い手がかりは公的ナウキャストの側にしかありません。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <span class="sec-num">04 — WHO IT'S FOR</span>
+        <h3 class="sec-title">想定している利用シーン</h3>
+        <p class="sec-intro">屋外で長く過ごし、遮るもののない場所にいる人ほど、手元で気づきを得られる価値が大きいと考えています。</p>
+        <div class="scenes">
+          <div class="scene"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 4 3.5 20h17z"/><path d="M12 4v16"/></svg></div><h4>キャンプ</h4><p>天候が急変しやすい場所。テーブルにスマホを置いておける。</p></div>
+          <div class="scene"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M7 21V3"/><path d="M7 4h10l-3 3 3 3H7"/></svg></div><h4>ゴルフ</h4><p>遮蔽物のない広い空間。落雷への注意が常に必要。</p></div>
+          <div class="scene"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="4" r="1.6"/><path d="M15 5.6v6.4a5 5 0 0 1-10 0v-1"/><path d="M5 11.5 3.4 9.9M5 11.5l1.6-1.6"/></svg></div><h4>釣り</h4><p>水辺での長時間の滞在。突発的な雷雨に備えたい。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <span class="sec-num">05 — DIRECTION</span>
+        <h3 class="sec-title">提供形態の想定</h3>
+        <p class="sec-intro">「その日だけ」の安心を手軽に、を軸にした料金の方向性を検討しています。いずれも構想段階で、内容・価格は未確定です。</p>
+        <div class="direction">
+          <div class="row">
+            <span class="name">基本</span>
+            <span class="desc">起動中の簡易表示。公的データの確認が中心。</span>
+            <span class="price">検討中</span>
+          </div>
+          <div class="row">
+            <span class="name">1Dayパス</span>
+            <span class="desc">キャンプや登山の「その日だけ」。同行者への共有などを想定。</span>
+            <span class="price">検討中</span>
+          </div>
+          <div class="row">
+            <span class="name">継続プラン</span>
+            <span class="desc">年間通して屋外で活動する人向けの想定。</span>
+            <span class="price">検討中</span>
+          </div>
+        </div>
+        <p class="unconfirmed">// 料金・機能はすべて検討中であり、確定したものではありません。</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p class="co">KRworks LLC</p>
+      <p style="margin:0;font-size:.9rem;font-weight:300;">合同会社KRworks ｜ 雷雲リスク見守りの研究開発コンセプト「ThorRadar」</p>
+      <p class="safe">本ページは研究開発中のコンセプトの紹介であり、提供中の製品ではありません。記載の機能・精度・効果はいずれも未検証で、安全を保証するものではありません。落雷から身を守れる安全な場所は頑丈な建物の中か金属屋根のある車内のみです。気象に関する判断は、必ず気象庁など公的機関の情報・警報に従ってください。</p>
+      <p class="meta">CONCEPT DRAFT · 2026 · for review</p>
+    </div>
+  </footer>
+  <a href="index.html" id="krw-home-fab" aria-label="ホームへ戻る">&#8962; Home</a>
+
+</body>
+</html>
